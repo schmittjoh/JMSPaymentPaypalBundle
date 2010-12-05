@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<container xmlns="http://www.symfony-project.org/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.symfony-project.org/schema/dic/services http://www.symfony-project.org/schema/dic/services/services-1.0.xsd">
+
+    <parameters>
+    	<parameter id="payment.plugin.paypal_express_checkout.class">Bundle\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin</parameter>
+    	<parameter id="payment.paypal.express_checkout.return_url"></parameter>
+    	<parameter id="payment.paypal.express_checkout.cancel_url"></parameter>
+    	
+    	<parameter id="payment.paypal.authentication_strategy.token.class">Bundle\PayPalPaymentBundle\Authentication\TokenAuthenticationStrategy</parameter>
+    	<parameter id="payment.paypal.username"></parameter>
+    	<parameter id="payment.paypal.password"></parameter>
+    	<parameter id="payment.paypal.signature"></parameter>
+    </parameters>
+
+    <services>
+    	<service id="payment.paypal.authentication_strategy.token" class="%payment.paypal.authentication_strategy.token.class%">
+    		<argument>%payment.paypal.username%</argument>
+    		<argument>%payment.paypal.password%</argument>
+    		<argument>%payment.paypal.signature%</argument>
+    	</service>
+    	
+    	<service id="payment.paypal.authentication_strategy" alias="payment.paypal.authentication_strategy.token" />
+    
+    	<service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%">
+    		<argument>%payment.paypal.express_checkout.return_url%</argument>
+    		<argument>%payment.paypal.express_checkout.cancel_url%</argument>
+    		<argument type="service" id="payment.paypal.authentication_strategy" />
+    		<argument>%kernel.debug%</argument>
+    	</service>
+    </services>
+</container>
