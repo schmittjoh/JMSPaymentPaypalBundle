@@ -1,6 +1,6 @@
 <?php
 
-namespace Bundle\PaymentBundle\Authentication;
+namespace Bundle\PayPalPaymentBundle\Authentication;
 
 use Bundle\PaymentBundle\BrowserKit\Request;
 use Bundle\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
@@ -20,11 +20,21 @@ class TokenAuthenticationStrategy implements AuthenticationStrategyInterface
     
     public function authenticate(Request $request)
     {
-        $header = '&PWD='.urlencode($this->password)
+        $header = 'PWD='.urlencode($this->password)
                  .'&USER='.urlencode($this->username)
                  .'&SIGNATURE='.urlencode($this->signature)
         ;
         
         $request->headers->set('X-PP-AUTHORIZATION', $header);
+    }
+    
+    public function getApiEndpoint($isDebug)
+    {
+        if ($isDebug) {
+            return 'https://api-3t.sandbox.paypal.com/nvp';
+        }
+        else {
+            return 'https://api-3t.paypal.com/nvp';
+        }
     }
 }

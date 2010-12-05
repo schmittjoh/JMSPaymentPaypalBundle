@@ -2,6 +2,14 @@
 
 namespace Bundle\PayPalPaymentBundle\Plugin;
 
+use Bundle\PaymentBundle\Model\CreditInterface;
+
+use Bundle\PaymentBundle\Model\PaymentInterface;
+
+use Bundle\PaymentBundle\Plugin\Exception\FunctionNotSupportedException;
+
+use Bundle\PaymentBundle\Model\PaymentInstructionInterface;
+
 use Bundle\PayPalPaymentBundle\Gateway\Response;
 
 use Bundle\PayPalPaymentBundle\Gateway\ErrorResponse;
@@ -37,9 +45,24 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
         $this->authenticationStrategy = $authenticationStrategy;
     }
     
+    public function getAvailableBalance(PaymentInstructionInterface $paymentInstruction)
+    {
+        throw new FunctionNotSupportedException('getAvailableBalance() is not supported.');
+    }
+    
+    public function updatePayment(PaymentInterface $payment)
+    {
+        throw new FunctionNotSupportedException('updatePayment() is not supported.');
+    }
+    
+    public function updateCredit(CreditInterface $credit)
+    {
+        throw new FunctionNotSupportedException('updateCredit() is not supported.');
+    }
+    
     public function requestAddressVerify($email, $street, $postalCode)
     {
-        return $this->request(array(
+        return $this->sendApiRequest(array(
             'METHOD' => 'AddressVerify',
             'EMAIL'  => $email,
             'STREET' => $street,
@@ -61,12 +84,12 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
             $parameters['NOTE'] = $note;
         }
         
-        return $this->request($parameters);
+        return $this->sendApiRequest($parameters);
     }
     
     public function requestCreateRecurringPaymentsProfile($token)
     {
-        return $this->request(array(
+        return $this->sendApiRequest(array(
             'METHOD' => 'CreateRecurringPaymentsProfile',
             'TOKEN' => $token,
         ));
@@ -87,7 +110,7 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
             $parameters['CURRENCYCODE'] = $currencyCode;
         }
         
-        return $this->request($parameters);
+        return $this->sendApiRequest($parameters);
     }
     
     public function requestDoCapture($authorizationId, $amount, $completeType, $currencyCode = null, $invNum = null, $note = null, $softDescriptor = null)
@@ -112,7 +135,7 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
             $parameters['SOFTDESCRIPTOR'] = $softDescriptor;
         }
         
-        return $this->request($parameters);
+        return $this->sendApiRequest($parameters);
     }
     
     public function requestDoDirectPayment($ipAddress, $paymentAction = null, $returnFmfDetails = null)
@@ -129,12 +152,12 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
             $parameters['RETURNFMFDETAILS'] = $returnFmfDetails;
         }
         
-        return $this->request($parameters);
+        return $this->sendApiRequest($parameters);
     }
     
     public function requestDoExpressCheckoutPayment($token, $amount, $paymentAction, $payerId, array $optionalParameters = array())
     {
-        return $this->request(array_merge($optionalParameters, array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoExpressCheckoutPayment',
             'TOKEN'  => $token,
             'PAYMENTREQUEST_0_AMT' => $amount,
@@ -164,12 +187,12 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
             'CANCELURL' => $cancelUrl,
         ));
         
-        return $this->request($parameters);
+        return $this->sendApiRequest($parameters);
     }
     
     public function requestGetExpressCheckoutDetails($token)
     {
-        return $this->request(array(
+        return $this->sendApiRequest(array(
             'METHOD' => 'GetExpressCheckoutDetails',
             'TOKEN'  => $token,
         ));
@@ -177,26 +200,26 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
     
     public function requestGetTransactionDetails($transactionId)
     {
-        return $this->request(array(
+        return $this->sendApiRequest(array(
             'METHOD' => 'GetTransactionDetails',
             'TRANSACTIONID' => $transactionId,
         ));
     }
     
-    public function request(array $parameters)
+    public function sendApiRequest(array $parameters)
     {
         // include some default parameters
         $parameters['VERSION'] = self::API_VERSION;
         
         // setup request, and authenticate it
         $request = new Request(
-            'https://api-3t'.($this->isDebug()?'.sandbox':'').'.paypal.com/nvp',
+            $this->authenticationStrategy->getApiEndpoint($this->isDebug()),
             'POST',
             $parameters
         );
         $this->authenticationStrategy->authenticate($request);
         
-        $response = parent::request($request);
+        $response = $this->request($request);
         $parameters = array();
         parse_str($response->getContent(), $parameters);
         

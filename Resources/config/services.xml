@@ -5,14 +5,14 @@
     xsi:schemaLocation="http://www.symfony-project.org/schema/dic/services http://www.symfony-project.org/schema/dic/services/services-1.0.xsd">
 
     <parameters>
-    	<parameter id="payment.plugin.paypal_express_checkout.class">Bundle\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin</parameter>
-    	<parameter id="payment.paypal.express_checkout.return_url"></parameter>
-    	<parameter id="payment.paypal.express_checkout.cancel_url"></parameter>
+    	<parameter key="payment.plugin.paypal_express_checkout.class">Bundle\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin</parameter>
+    	<parameter key="payment.paypal.express_checkout.return_url"></parameter>
+    	<parameter key="payment.paypal.express_checkout.cancel_url"></parameter>
     	
-    	<parameter id="payment.paypal.authentication_strategy.token.class">Bundle\PayPalPaymentBundle\Authentication\TokenAuthenticationStrategy</parameter>
-    	<parameter id="payment.paypal.username"></parameter>
-    	<parameter id="payment.paypal.password"></parameter>
-    	<parameter id="payment.paypal.signature"></parameter>
+    	<parameter key="payment.paypal.authentication_strategy.token.class">Bundle\PayPalPaymentBundle\Authentication\TokenAuthenticationStrategy</parameter>
+    	<parameter key="payment.paypal.username"></parameter>
+    	<parameter key="payment.paypal.password"></parameter>
+    	<parameter key="payment.paypal.signature"></parameter>
     </parameters>
 
     <services>
