@@ -24,6 +24,7 @@ to register this plugin with the payment plugin controller:
     payment.config:
         plugins: [paypal_express_checkout]
 
+=====
 Usage
 =====
 You can either interact with the plugin instance directly, or through the payment 

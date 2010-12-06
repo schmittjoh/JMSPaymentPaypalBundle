@@ -31,7 +31,7 @@ use Bundle\PaymentBundle\Model\FinancialTransactionInterface;
  * @see https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/howto_api_reference
  * @author Johannes M. Schmitt <schmittjoh@gmail.com>
  */
-abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInterface
+abstract class PayPalPlugin extends GatewayPlugin
 {
     const API_VERSION = '65.1';
     
@@ -43,21 +43,6 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
         parent::__construct($isDebug);
         
         $this->authenticationStrategy = $authenticationStrategy;
-    }
-    
-    public function getAvailableBalance(PaymentInstructionInterface $paymentInstruction)
-    {
-        throw new FunctionNotSupportedException('getAvailableBalance() is not supported.');
-    }
-    
-    public function updatePayment(PaymentInterface $payment)
-    {
-        throw new FunctionNotSupportedException('updatePayment() is not supported.');
-    }
-    
-    public function updateCredit(CreditInterface $credit)
-    {
-        throw new FunctionNotSupportedException('updateCredit() is not supported.');
     }
     
     public function requestAddressVerify($email, $street, $postalCode)
@@ -220,6 +205,10 @@ abstract class PayPalPlugin extends GatewayPlugin implements QueryablePluginInte
         $this->authenticationStrategy->authenticate($request);
         
         $response = $this->request($request);
+        if (200 !== $response->getStatus()) {
+            throw new CommunicationException('The API request was not successful (Status: '.$response->getStatus().'): '.$response->getContent());
+        }
+        
         $parameters = array();
         parse_str($response->getContent(), $parameters);
         

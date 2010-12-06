@@ -3,7 +3,6 @@
 namespace Bundle\PayPalPaymentBundle\Authentication;
 
 use Bundle\PaymentBundle\BrowserKit\Request;
-use Bundle\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
 
 class TokenAuthenticationStrategy implements AuthenticationStrategyInterface
 {
@@ -20,12 +19,9 @@ class TokenAuthenticationStrategy implements AuthenticationStrategyInterface
     
     public function authenticate(Request $request)
     {
-        $header = 'PWD='.urlencode($this->password)
-                 .'&USER='.urlencode($this->username)
-                 .'&SIGNATURE='.urlencode($this->signature)
-        ;
-        
-        $request->headers->set('X-PP-AUTHORIZATION', $header);
+        $request->request->set('PWD', $this->password);
+        $request->request->set('USER', $this->username);
+        $request->request->set('SIGNATURE', $this->signature);
     }
     
     public function getApiEndpoint($isDebug)

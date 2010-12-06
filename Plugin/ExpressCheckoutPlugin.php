@@ -3,7 +3,6 @@
 namespace Bundle\PayPalPaymentBundle\Plugin;
 
 use Bundle\PaymentBundle\Util\Number;
-
 use Bundle\PaymentBundle\Plugin\Exception\PaymentPendingException;
 use Bundle\PaymentBundle\Plugin\Exception\BlockedException;
 use Bundle\PaymentBundle\Plugin\PluginInterface;
@@ -92,7 +91,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
                 $transaction->setReasonCode($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
                 
                 throw $ex;
-        }       
+        }
         
         $transaction->setProcessedAmount($response->body->get('PAYMENTINFO_0_AMT'));
         $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));

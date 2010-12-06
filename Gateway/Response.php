@@ -2,7 +2,7 @@
 
 namespace Bundle\PayPalPaymentBundle\Gateway;
 
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class Response
 {
@@ -41,7 +41,6 @@ class Response
                 'code' => $this->body->get('L_ERRORCODE'.$i),
                 'short_message' => $this->body->get('L_SHORTMESSAGE'.$i),
                 'long_message' => $this->body->get('L_LONGMESSAGE'.$i),
-                'severity' => $this->body->get('L_SEVERITYCODE'.$i),
             );
             
             $i++;
@@ -56,7 +55,7 @@ class Response
             $str = 'Debug-Token: '.$this->body->get('CORRELATIONID')."\n";
             
             foreach ($this->getErrors() as $error) {
-                $str .= "{$error['code']}: {$error['long_message']} ({$error['severity']})\n";
+                $str .= "{$error['code']}: {$error['short_message']} ({$error['long_message']})\n";
             }
         }
         else {
