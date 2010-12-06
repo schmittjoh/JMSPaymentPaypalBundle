@@ -2,6 +2,8 @@
 
 namespace Bundle\PayPalPaymentBundle\Plugin;
 
+use Bundle\PaymentBundle\Model\ExtendedDataInterface;
+
 use Bundle\PaymentBundle\Util\Number;
 use Bundle\PaymentBundle\Plugin\Exception\PaymentPendingException;
 use Bundle\PaymentBundle\Plugin\Exception\BlockedException;
@@ -34,10 +36,10 @@ class ExpressCheckoutPlugin extends PayPalPlugin
         if (false === $data->has('express_checkout_token')) {
             $response = $this->requestSetExpressCheckout(
                 $transaction->getRequestedAmount(),
-                $this->returnUrl,
-                $this->cancelUrl,
+                $this->getReturnUrl($data),
+                $this->getCancelUrl($data),
                 array(
-                	'PAYMENTREQUEST_0_PAYMENTACTION' => 'Authorization',
+              	    'PAYMENTREQUEST_0_PAYMENTACTION' => 'Authorization',
                     'PAYMENTREQUEST_0_CURRENCYCODE'  => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
                 )
             );
@@ -96,6 +98,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
         $transaction->setProcessedAmount($response->body->get('PAYMENTINFO_0_AMT'));
         $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
     
     public function deposit(FinancialTransactionInterface $transaction, $retry)
@@ -154,5 +157,29 @@ class ExpressCheckoutPlugin extends PayPalPlugin
             $host, 
             $token
         );
+    }
+    
+    protected function getReturnUrl(ExtendedDataInterface $data)
+    {
+        if ($data->has('return_url')) {
+            return $data->get('return_url');
+        }
+        else if (0 !== strlen($this->returnUrl)) {
+            return $this->returnUrl;
+        }
+        
+        throw new \RuntimeException('You must configure a return url.');
+    }
+    
+    protected function getCancelUrl(ExtendedDataInterface $data)
+    {
+        if ($data->has('return_url')) {
+            return $data->get('return_url');
+        }
+        else if (0 !== strlen($this->cancelUrl)) {
+            return $this->cancelUrl;
+        }
+        
+        throw new \RuntimeException('You must configure a cancel url.');
     }
 }

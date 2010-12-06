@@ -23,6 +23,12 @@ class PayPalExtension extends Extension
         if (isset($config['signature'])) {
             $container->setParameter('payment.paypal.signature', $config['signature']);
         }
+        if (isset($config['return_url'])) {
+            $container->setParameter('payment.paypal.express_checkout.return_url', $config['return_url']);
+        }
+        if (isset($config['cancel_url'])) {
+            $container->setParameter('payment.paypal.express_checkout.cancel_url', $config['cancel_url']);
+        }
     }
     
 	public function getNamespace()
