@@ -3,16 +3,15 @@
 namespace Bundle\PayPalPaymentBundle\Plugin;
 
 use Bundle\PaymentBundle\Model\ExtendedDataInterface;
-
-use Bundle\PaymentBundle\Util\Number;
+use Bundle\PaymentBundle\Model\FinancialTransactionInterface;
 use Bundle\PaymentBundle\Plugin\Exception\PaymentPendingException;
 use Bundle\PaymentBundle\Plugin\Exception\BlockedException;
 use Bundle\PaymentBundle\Plugin\PluginInterface;
 use Bundle\PaymentBundle\Plugin\Exception\FinancialException;
 use Bundle\PaymentBundle\Plugin\Exception\Action\VisitUrl;
 use Bundle\PaymentBundle\Plugin\Exception\ActionRequiredException;
+use Bundle\PaymentBundle\Util\Number;
 use Bundle\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
-use Bundle\PaymentBundle\Model\FinancialTransactionInterface;
 
 class ExpressCheckoutPlugin extends PayPalPlugin
 {
@@ -29,6 +28,95 @@ class ExpressCheckoutPlugin extends PayPalPlugin
     
     public function approve(FinancialTransactionInterface $transaction, $retry)
     {
+        $this->createCheckoutBillingAgreement($transaction, 'Authorization');
+    }
+        
+    public function approveAndDeposit($transaction, $retry)
+    {
+        $this->createCheckoutBillingAgreement($transaction, 'Sale');
+    }
+    
+    public function credit(FinancialTransactionInterface $transaction, $retry)
+    {
+        $this->currentTransaction = $transaction;
+        $data = $transaction->getExtendedData();
+        $approveTransaction = $transaction->getCredit()->getPayment()->getApproveTransaction();
+        
+        $parameters = array();
+        if (Number::compare($transaction->getRequestedAmount(), $approveTransaction->getProcessedAmount()) !== 0) {
+            $parameters['REFUNDTYPE'] = 'Partial';
+            $parameters['AMT'] = $transaction->getRequestedAmount();
+            $parameters['CURRENCYCODE'] = $transaction->getCredit()->getPaymentInstruction()->getCurrency();
+        }
+        
+        $response = $this->requestRefundTransaction($data->get('authorization_id'), $parameters);
+        
+        $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
+        $transaction->setProcessedAmount($response->body->get('NETREFUNDAMT'));
+        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+    }
+    
+    public function deposit(FinancialTransactionInterface $transaction, $retry)
+    {
+        $this->currentTransaction = $transaction;
+        $data = $transaction->getExtendedData();
+        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+        
+        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
+            $completeType = 'Complete';
+        }
+        else {
+            $completeType = 'NotComplete';
+        }
+        
+        $this->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+        ));
+        $details = $this->requestGetTransactionDetails($authorizationId);
+        
+        switch ($details->body->get('PAYMENTSTATUS')) {
+            case 'Completed':
+                break;
+                
+            case 'Pending':
+                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                
+            default:
+                $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
+                $ex->setFinancialTransaction($transaction);
+                $transaction->setResponseCode('Failed');
+                $transaction->setReasonCode($response->body->get('PAYMENTSTATUS'));
+                
+                throw $ex;
+        }
+        
+        $transaction->setReferenceNumber($authorizationId);
+        $transaction->setProcessedAmount($details->body->get('AMT'));
+        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
+    }
+    
+    public function reverseApproval(FinancialTransactionInterface $transaction, $retry)
+    {
+        $data = $transaction->getExtendedData();
+        
+        $this->requestDoVoid($data->get('authorization_id'));
+        
+        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+    }
+    
+    public function processes($paymentSystemName)
+    {
+        return 'paypal_express_checkout' === $paymentSystemName;
+    }
+    
+    public function isIndependentCreditSupported()
+    {
+        return false;
+    }
+    
+    protected function createCheckoutBillingAgreement(FinancialTransactionInterface $transaction, $paymentAction)
+    {
         $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
         
@@ -39,7 +127,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
                 $this->getReturnUrl($data),
                 $this->getCancelUrl($data),
                 array(
-              	    'PAYMENTREQUEST_0_PAYMENTACTION' => 'Authorization',
+              	    'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
                     'PAYMENTREQUEST_0_CURRENCYCODE'  => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
                 )
             );
@@ -77,7 +165,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
         
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
-        $response = $this->requestDoExpressCheckoutPayment($data->get('express_checkout_token'), $transaction->getRequestedAmount(), 'Authorization', $details->body->get('PAYERID'));
+        $response = $this->requestDoExpressCheckoutPayment($data->get('express_checkout_token'), $transaction->getRequestedAmount(), $paymentAction, $details->body->get('PAYERID'));
         
         switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
             case 'Completed':
@@ -95,57 +183,10 @@ class ExpressCheckoutPlugin extends PayPalPlugin
                 throw $ex;
         }
         
-        $transaction->setProcessedAmount($response->body->get('PAYMENTINFO_0_AMT'));
         $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
+        $transaction->setProcessedAmount($response->body->get('PAYMENTINFO_0_AMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
-    }
-    
-    public function deposit(FinancialTransactionInterface $transaction, $retry)
-    {
-        $this->currentTransaction = $transaction;
-        $data = $transaction->getExtendedData();
-        
-        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
-            $completeType = 'Complete';
-        }
-        else {
-            $completeType = 'NotComplete';
-        }
-        
-        $this->requestDoCapture($transaction->getReferenceNumber(), $transaction->getRequestedAmount(), $completeType, array(
-            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        ));
-        $details = $this->requestGetTransactionDetails($transaction->getReferenceNumber());
-        
-        switch ($details->body->get('PAYMENTSTATUS')) {
-            case 'Completed':
-                break;
-                
-            case 'Pending':
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-                
-            default:
-                $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
-                $ex->setFinancialTransaction($transaction);
-                $transaction->setResponseCode('Failed');
-                $transaction->setReasonCode($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
-                
-                throw $ex;
-        }
-        
-        $transaction->setProcessedAmount($details->body->get('AMT'));
-        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
-    }
-    
-    public function processes($paymentSystemName)
-    {
-        return 'paypal_express_checkout' === $paymentSystemName;
-    }
-    
-    public function isIndependentCreditSupported()
-    {
-        return false;
     }
     
     protected function getExpressUrl($token)

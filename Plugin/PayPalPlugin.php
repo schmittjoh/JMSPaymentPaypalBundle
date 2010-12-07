@@ -55,21 +55,12 @@ abstract class PayPalPlugin extends GatewayPlugin
         ));
     }
     
-    public function requestBillOutstandingAmount($profileId, $amt = null, $note = null)
+    public function requestBillOutstandingAmount($profileId, array $optionalParameters = array())
     {
-        $parameters = array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'BillOutstandingAmount',
             'PROFILEID' => $profileId,
-        );
-        
-        if (null !== $amt) {
-            $parameters['AMT'] = $amt;
-        }
-        if (null !== $note) {
-            $parameters['NOTE'] = $note;
-        }
-        
-        return $this->sendApiRequest($parameters);
+        )));
     }
     
     public function requestCreateRecurringPaymentsProfile($token)
@@ -80,64 +71,31 @@ abstract class PayPalPlugin extends GatewayPlugin
         ));
     }
     
-    public function requestDoAuthorization($transactionId, $amt, $transactionEntity = null, $currencyCode = null)
+    public function requestDoAuthorization($transactionId, $amount, array $optionalParameters = array())
     {
-        $parameters = array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoAuthorization',
             'TRANSACTIONID' => $transactionId,
-            'AMT' => $amt,
-        );
-        
-        if (null !== $transactionEntity) {
-            $parameters['TRANSACTIONENTITY'] = $transactionEntity;
-        }
-        if (null !== $currencyCode) {
-            $parameters['CURRENCYCODE'] = $currencyCode;
-        }
-        
-        return $this->sendApiRequest($parameters);
+            'AMT' => $amount,
+        )));
     }
     
-    public function requestDoCapture($authorizationId, $amount, $completeType, $currencyCode = null, $invNum = null, $note = null, $softDescriptor = null)
+    public function requestDoCapture($authorizationId, $amount, $completeType, array $optionalParameters = array())
     {
-        $parameters = array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoCapture',
             'AUTHORIZATIONID' => $authorizationId,
             'AMT' => $amount,
             'COMPLETETYPE' => $completeType,
-        );
-        
-        if (null !== $currencyCode) {
-            $parameters['CURRENCYCODE'] = $currencyCode;
-        }
-        if (null !== $invNum) {
-            $parameters['INVNUM'] = $invNum;
-        }
-        if (null !== $note) {
-            $parameters['NOTE'] = $note;
-        }
-        if (null !== $softDescriptor) {
-            $parameters['SOFTDESCRIPTOR'] = $softDescriptor;
-        }
-        
-        return $this->sendApiRequest($parameters);
+        )));
     }
     
-    public function requestDoDirectPayment($ipAddress, $paymentAction = null, $returnFmfDetails = null)
+    public function requestDoDirectPayment($ipAddress, array $optionalParameters = array())
     {
-        $parameters = array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoDirectPayment',
             'IPADDRESS' => $ipAddress,
-        );
-        
-        if (null !== $paymentAction) {
-            $parameters['PAYMENTACTION'] = $paymentAction;
-        }
-        if (null !== $returnFmfDetails) {
-            $parameters['RETURNFMFDETAILS'] = $returnFmfDetails;
-        }
-        
-        return $this->sendApiRequest($parameters);
+        )));        
     }
     
     public function requestDoExpressCheckoutPayment($token, $amount, $paymentAction, $payerId, array $optionalParameters = array())
@@ -148,6 +106,14 @@ abstract class PayPalPlugin extends GatewayPlugin
             'PAYMENTREQUEST_0_AMT' => $amount,
             'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
             'PAYERID' => $payerId,
+        )));
+    }
+    
+    public function requestDoVoid($authorizationId, array $optionalParameters = array())
+    {
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
+            'METHOD' => 'DoVoid',
+            'AUTHORIZATIONID' => $authorizationId,
         )));
     }
     
@@ -165,14 +131,12 @@ abstract class PayPalPlugin extends GatewayPlugin
      */
     public function requestSetExpressCheckout($amount, $returnUrl, $cancelUrl, array $optionalParameters = array())
     {
-        $parameters = array_merge($optionalParameters, array(
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'SetExpressCheckout',
             'PAYMENTREQUEST_0_AMT' => $amount,
             'RETURNURL' => $returnUrl,
             'CANCELURL' => $cancelUrl,
-        ));
-        
-        return $this->sendApiRequest($parameters);
+        )));
     }
     
     public function requestGetExpressCheckoutDetails($token)
@@ -189,6 +153,14 @@ abstract class PayPalPlugin extends GatewayPlugin
             'METHOD' => 'GetTransactionDetails',
             'TRANSACTIONID' => $transactionId,
         ));
+    }
+    
+    public function requestRefundTransaction($transactionId, array $optionalParameters = array())
+    {
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
+            'METHOD' => 'RefundTransaction',
+            'TRANSACTIONID' => $transactionId
+        )));
     }
     
     public function sendApiRequest(array $parameters)
