@@ -31,7 +31,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
         $this->createCheckoutBillingAgreement($transaction, 'Authorization');
     }
         
-    public function approveAndDeposit($transaction, $retry)
+    public function approveAndDeposit(FinancialTransactionInterface $transaction, $retry)
     {
         $this->createCheckoutBillingAgreement($transaction, 'Sale');
     }
