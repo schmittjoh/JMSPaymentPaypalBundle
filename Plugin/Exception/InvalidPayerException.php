@@ -1,8 +1,8 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Plugin\Exception;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\Exception;
 
-use Bundle\PaymentBundle\Plugin\Exception\FinancialException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
 
 /**
  * This exception is thrown when the buyer is not in desired state.

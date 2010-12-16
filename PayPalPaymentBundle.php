@@ -1,6 +1,6 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 

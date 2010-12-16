@@ -1,8 +1,8 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Authentication;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Authentication;
 
-use Bundle\PaymentBundle\BrowserKit\Request;
+use Bundle\JMS\Payment\CorePaymentBundle\BrowserKit\Request;
 
 interface AuthenticationStrategyInterface
 {

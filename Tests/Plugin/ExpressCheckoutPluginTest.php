@@ -1,13 +1,13 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Tests\Plugin;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Tests\Plugin;
 
-use Bundle\PaymentBundle\Plugin\Exception\ActionRequiredException;
-use Bundle\PayPalPaymentBundle\Gateway\Response;
-use Bundle\PaymentBundle\Entity\FinancialTransaction;
-use Bundle\PaymentBundle\Entity\Payment;
-use Bundle\PaymentBundle\Entity\ExtendedData;
-use Bundle\PaymentBundle\Entity\PaymentInstruction;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\ActionRequiredException;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\Response;
+use Bundle\JMS\Payment\CorePaymentBundle\Entity\FinancialTransaction;
+use Bundle\JMS\Payment\CorePaymentBundle\Entity\Payment;
+use Bundle\JMS\Payment\CorePaymentBundle\Entity\ExtendedData;
+use Bundle\JMS\Payment\CorePaymentBundle\Entity\PaymentInstruction;
 
 class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 {
@@ -35,7 +35,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
             $this->assertSame($transaction, $ex->getFinancialTransaction());
             
             $action = $ex->getAction();
-            $this->assertInstanceOf('Bundle\PaymentBundle\Plugin\Exception\Action\VisitUrl', $action);
+            $this->assertInstanceOf('Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\Action\VisitUrl', $action);
             $this->assertNotEmpty($action->getUrl());
             $this->assertEquals('foo', $data->get('express_checkout_token'));
             $this->assertTrue($data->isEncryptionRequired('express_checkout_token'));
@@ -55,7 +55,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
     
     protected function getPlugin(array $methods = array())
     {
-        $mock = $this->getMockBuilder('Bundle\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin')
+        $mock = $this->getMockBuilder('Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin')
                 ->disableOriginalConstructor()
                 ->setMethods($methods)
                 ->getMock()

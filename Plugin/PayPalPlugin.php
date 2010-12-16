@@ -1,29 +1,29 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Plugin;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin;
 
-use Bundle\PaymentBundle\Model\CreditInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\CreditInterface;
 
-use Bundle\PaymentBundle\Model\PaymentInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\PaymentInterface;
 
-use Bundle\PaymentBundle\Plugin\Exception\FunctionNotSupportedException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FunctionNotSupportedException;
 
-use Bundle\PaymentBundle\Model\PaymentInstructionInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\PaymentInstructionInterface;
 
-use Bundle\PayPalPaymentBundle\Gateway\Response;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\Response;
 
-use Bundle\PayPalPaymentBundle\Gateway\ErrorResponse;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\ErrorResponse;
 
-use Bundle\PaymentBundle\Plugin\QueryablePluginInterface;
-use Bundle\PaymentBundle\BrowserKit\Request;
-use Bundle\PaymentBundle\Plugin\GatewayPlugin;
-use Bundle\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
-use Bundle\PayPalPaymentBundle\Plugin\Exception\InvalidPayerException;
-use Bundle\PaymentBundle\Entity\FinancialTransaction;
-use Bundle\PaymentBundle\Plugin\Exception\FinancialException;
-use Bundle\PaymentBundle\Plugin\Exception\InternalErrorException;
-use Bundle\PaymentBundle\Plugin\Exception\CommunicationException;
-use Bundle\PaymentBundle\Model\FinancialTransactionInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\QueryablePluginInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\BrowserKit\Request;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\GatewayPlugin;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\Exception\InvalidPayerException;
+use Bundle\JMS\Payment\CorePaymentBundle\Entity\FinancialTransaction;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\InternalErrorException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\CommunicationException;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface;
 
 /**
  * Implements the NVP API but does not perform any actual transactions

@@ -1,8 +1,8 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Tests\Plugin;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Tests\Plugin;
 
-use Bundle\PayPalPaymentBundle\Authentication\TokenAuthenticationStrategy;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\TokenAuthenticationStrategy;
 
 class PayPalPluginTest extends \PHPUnit_Framework_TestCase
 {
@@ -42,11 +42,11 @@ class PayPalPluginTest extends \PHPUnit_Framework_TestCase
     protected function getPlugin()
     {
         $mock = $this->getMockForAbstractClass(
-        	'Bundle\PayPalPaymentBundle\Plugin\PayPalPlugin',
+        	'Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\PayPalPlugin',
             array($this->getStrategy(), true)
         );
         
-        $transaction = $this->getMock('Bundle\PaymentBundle\Model\FinancialTransactionInterface');
+        $transaction = $this->getMock('Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface');
         $reflection = new \ReflectionProperty($mock, 'currentTransaction');
         $reflection->setAccessible(true);
         $reflection->setValue($mock, $transaction);

@@ -1,6 +1,6 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\DependencyInjection;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\DependencyInjection;
 
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 

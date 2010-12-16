@@ -1,4 +1,4 @@
-This is an extension to the PaymentBundle providing access to PayPal.
+This is an extension to the CorePaymentBundle providing access to PayPal.
 
 For more info, see the docs located at:
 Resources/doc

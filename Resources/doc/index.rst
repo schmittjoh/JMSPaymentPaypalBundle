@@ -3,7 +3,7 @@ Installation
 ============
 Dependencies
 ------------
-This plugin depends on the PaymentBundle_, so you'll need to add this to your kernel
+This plugin depends on the CorePaymentBundle_, so you'll need to add this to your kernel
 as well even if you don't want to use its persistence capabilities.
 
 Configuration
@@ -16,7 +16,7 @@ Configuration
         password: your api password (not your account password)
         signature: your api signature
 
-If you want to use this plugin in combination with the PaymentBundle_, then you need 
+If you want to use this plugin in combination with the CorePaymentBundle_, then you need 
 to register this plugin with the payment plugin controller:
 ::
 
@@ -33,4 +33,4 @@ checks or persistence management, then working with the plugin directly is the w
 to go.
 
 
-.. _PaymentBundle: http://github.com/schmittjoh/PaymentBundle
+.. _CorePaymentBundle: http://github.com/schmittjoh/CorePaymentBundle

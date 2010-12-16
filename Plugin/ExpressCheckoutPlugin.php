@@ -1,17 +1,17 @@
 <?php
 
-namespace Bundle\PayPalPaymentBundle\Plugin;
+namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin;
 
-use Bundle\PaymentBundle\Model\ExtendedDataInterface;
-use Bundle\PaymentBundle\Model\FinancialTransactionInterface;
-use Bundle\PaymentBundle\Plugin\Exception\PaymentPendingException;
-use Bundle\PaymentBundle\Plugin\Exception\BlockedException;
-use Bundle\PaymentBundle\Plugin\PluginInterface;
-use Bundle\PaymentBundle\Plugin\Exception\FinancialException;
-use Bundle\PaymentBundle\Plugin\Exception\Action\VisitUrl;
-use Bundle\PaymentBundle\Plugin\Exception\ActionRequiredException;
-use Bundle\PaymentBundle\Util\Number;
-use Bundle\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\ExtendedDataInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\PaymentPendingException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\BlockedException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\PluginInterface;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\Action\VisitUrl;
+use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\ActionRequiredException;
+use Bundle\JMS\Payment\CorePaymentBundle\Util\Number;
+use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
 
 class ExpressCheckoutPlugin extends PayPalPlugin
 {
