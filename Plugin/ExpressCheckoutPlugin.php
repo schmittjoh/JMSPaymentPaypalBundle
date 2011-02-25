@@ -1,17 +1,17 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin;
+namespace JMS\Payment\PaypalBundle\Plugin;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Model\ExtendedDataInterface;
-use Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\PaymentPendingException;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\BlockedException;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\PluginInterface;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\Action\VisitUrl;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\ActionRequiredException;
-use Bundle\JMS\Payment\CorePaymentBundle\Util\Number;
-use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
+use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
+use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
+use JMS\Payment\CoreBundle\Plugin\Exception\BlockedException;
+use JMS\Payment\CoreBundle\Plugin\PluginInterface;
+use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
+use JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl;
+use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\CoreBundle\Util\Number;
+use JMS\Payment\PaypalBundle\Authentication\AuthenticationStrategyInterface;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -29,7 +29,7 @@ use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\AuthenticationStrategy
  * limitations under the License.
  */
 
-class ExpressCheckoutPlugin extends PayPalPlugin
+class ExpressCheckoutPlugin extends PaypalPlugin
 {
     protected $returnUrl;
     protected $cancelUrl;
@@ -143,7 +143,7 @@ class ExpressCheckoutPlugin extends PayPalPlugin
                 $this->getReturnUrl($data),
                 $this->getCancelUrl($data),
                 array(
-              	    'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
+                      'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
                     'PAYMENTREQUEST_0_CURRENCYCODE'  => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
                 )
             );

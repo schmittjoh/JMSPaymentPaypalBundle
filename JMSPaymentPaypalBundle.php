@@ -1,6 +1,6 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle;
+namespace JMS\Payment\PaypalBundle;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
@@ -20,6 +20,6 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  * limitations under the License.
  */
 
-class PayPalPaymentBundle extends Bundle
+class JMSPaymentPaypalBundle extends Bundle
 {
 }

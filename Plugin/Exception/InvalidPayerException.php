@@ -1,8 +1,8 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\Exception;
+namespace JMS\Payment\PaypalBundle\Plugin\Exception;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
+use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>

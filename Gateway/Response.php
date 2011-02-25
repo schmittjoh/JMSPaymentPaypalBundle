@@ -1,6 +1,6 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Gateway;
+namespace JMS\Payment\PaypalBundle\Gateway;
 
 use Symfony\Component\HttpFoundation\ParameterBag;
 

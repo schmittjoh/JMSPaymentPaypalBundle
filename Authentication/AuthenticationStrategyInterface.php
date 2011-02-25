@@ -1,8 +1,8 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Authentication;
+namespace JMS\Payment\PaypalBundle\Authentication;
 
-use Bundle\JMS\Payment\CorePaymentBundle\BrowserKit\Request;
+use JMS\Payment\CoreBundle\BrowserKit\Request;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>

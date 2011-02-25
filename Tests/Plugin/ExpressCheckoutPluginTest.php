@@ -1,13 +1,13 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Tests\Plugin;
+namespace JMS\Payment\PaypalBundle\Tests\Plugin;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\ActionRequiredException;
-use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\Response;
-use Bundle\JMS\Payment\CorePaymentBundle\Entity\FinancialTransaction;
-use Bundle\JMS\Payment\CorePaymentBundle\Entity\Payment;
-use Bundle\JMS\Payment\CorePaymentBundle\Entity\ExtendedData;
-use Bundle\JMS\Payment\CorePaymentBundle\Entity\PaymentInstruction;
+use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\PaypalBundle\Gateway\Response;
+use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
+use JMS\Payment\CoreBundle\Entity\Payment;
+use JMS\Payment\CoreBundle\Entity\ExtendedData;
+use JMS\Payment\CoreBundle\Entity\PaymentInstruction;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -51,7 +51,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
             $this->assertSame($transaction, $ex->getFinancialTransaction());
 
             $action = $ex->getAction();
-            $this->assertInstanceOf('Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\Action\VisitUrl', $action);
+            $this->assertInstanceOf('JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl', $action);
             $this->assertNotEmpty($action->getUrl());
             $this->assertEquals('foo', $data->get('express_checkout_token'));
             $this->assertTrue($data->isEncryptionRequired('express_checkout_token'));
@@ -71,7 +71,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
     protected function getPlugin(array $methods = array())
     {
-        $mock = $this->getMockBuilder('Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\ExpressCheckoutPlugin')
+        $mock = $this->getMockBuilder('JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin')
                 ->disableOriginalConstructor()
                 ->setMethods($methods)
                 ->getMock()

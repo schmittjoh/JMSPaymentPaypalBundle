@@ -1,29 +1,29 @@
 <?php
 
-namespace Bundle\JMS\Payment\PayPalPaymentBundle\Plugin;
+namespace JMS\Payment\PaypalBundle\Plugin;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Model\CreditInterface;
+use JMS\Payment\CoreBundle\Model\CreditInterface;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Model\PaymentInterface;
+use JMS\Payment\CoreBundle\Model\PaymentInterface;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FunctionNotSupportedException;
+use JMS\Payment\CoreBundle\Plugin\Exception\FunctionNotSupportedException;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Model\PaymentInstructionInterface;
+use JMS\Payment\CoreBundle\Model\PaymentInstructionInterface;
 
-use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\Response;
+use JMS\Payment\PaypalBundle\Gateway\Response;
 
-use Bundle\JMS\Payment\PayPalPaymentBundle\Gateway\ErrorResponse;
+use JMS\Payment\PaypalBundle\Gateway\ErrorResponse;
 
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\QueryablePluginInterface;
-use Bundle\JMS\Payment\CorePaymentBundle\BrowserKit\Request;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\GatewayPlugin;
-use Bundle\JMS\Payment\PayPalPaymentBundle\Authentication\AuthenticationStrategyInterface;
-use Bundle\JMS\Payment\PayPalPaymentBundle\Plugin\Exception\InvalidPayerException;
-use Bundle\JMS\Payment\CorePaymentBundle\Entity\FinancialTransaction;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\FinancialException;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\InternalErrorException;
-use Bundle\JMS\Payment\CorePaymentBundle\Plugin\Exception\CommunicationException;
-use Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface;
+use JMS\Payment\CoreBundle\Plugin\QueryablePluginInterface;
+use JMS\Payment\CoreBundle\BrowserKit\Request;
+use JMS\Payment\CoreBundle\Plugin\GatewayPlugin;
+use JMS\Payment\PaypalBundle\Authentication\AuthenticationStrategyInterface;
+use JMS\Payment\PaypalBundle\Plugin\Exception\InvalidPayerException;
+use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
+use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
+use JMS\Payment\CoreBundle\Plugin\Exception\InternalErrorException;
+use JMS\Payment\CoreBundle\Plugin\Exception\CommunicationException;
+use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -47,7 +47,7 @@ use Bundle\JMS\Payment\CorePaymentBundle\Model\FinancialTransactionInterface;
  * @see https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/howto_api_reference
  * @author Johannes M. Schmitt <schmittjoh@gmail.com>
  */
-abstract class PayPalPlugin extends GatewayPlugin
+abstract class PaypalPlugin extends GatewayPlugin
 {
     const API_VERSION = '65.1';
 
