@@ -3,17 +3,11 @@
 namespace JMS\Payment\PaypalBundle\Plugin;
 
 use JMS\Payment\CoreBundle\Model\CreditInterface;
-
 use JMS\Payment\CoreBundle\Model\PaymentInterface;
-
 use JMS\Payment\CoreBundle\Plugin\Exception\FunctionNotSupportedException;
-
 use JMS\Payment\CoreBundle\Model\PaymentInstructionInterface;
-
 use JMS\Payment\PaypalBundle\Gateway\Response;
-
 use JMS\Payment\PaypalBundle\Gateway\ErrorResponse;
-
 use JMS\Payment\CoreBundle\Plugin\QueryablePluginInterface;
 use JMS\Payment\CoreBundle\BrowserKit\Request;
 use JMS\Payment\CoreBundle\Plugin\GatewayPlugin;
