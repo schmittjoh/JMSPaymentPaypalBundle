@@ -28,11 +28,13 @@ class Configuration
 
         return $tb
             ->root('jms_payment_paypal', 'array')
-                ->scalarNode('username')->isRequired()->cannotBeEmpty()->end()
-                ->scalarNode('password')->isRequired()->cannotBeEmpty()->end()
-                ->scalarNode('signature')->isRequired()->cannotBeEmpty()->end()
-                ->scalarNode('return_url')->defaultNull()->end()
-                ->scalarNode('cancel_url')->defaultNull()->end()
+                ->children()
+                    ->scalarNode('username')->isRequired()->cannotBeEmpty()->end()
+                    ->scalarNode('password')->isRequired()->cannotBeEmpty()->end()
+                    ->scalarNode('signature')->isRequired()->cannotBeEmpty()->end()
+                    ->scalarNode('return_url')->defaultNull()->end()
+                    ->scalarNode('cancel_url')->defaultNull()->end()
+                ->end()
             ->end()
             ->buildTree();
     }
