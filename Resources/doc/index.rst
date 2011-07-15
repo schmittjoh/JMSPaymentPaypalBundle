@@ -3,7 +3,7 @@ Installation
 ============
 Dependencies
 ------------
-This plugin depends on the PaymentCoreBundle_, so you'll need to add this to your kernel
+This plugin depends on the JMSPaymentCoreBundle_, so you'll need to add this to your kernel
 as well even if you don't want to use its persistence capabilities.
 
 Configuration
@@ -22,8 +22,8 @@ Usage
 =====
 With the Payment Plugin Controller (Recommended)
 ------------------------------------------------
-See the DemoController that is part of the PaymentCoreBundle_ for a sample usage:
-https://github.com/schmittjoh/PaymentCoreBundle/blob/master/Controller/DemoController.php
+See the DemoController that is part of the JMSPaymentCoreBundle_ for a sample usage:
+https://github.com/schmittjoh/JMSPaymentCoreBundle/blob/master/Controller/DemoController.php
 
 Without the Payment Plugin Controller
 -------------------------------------
@@ -34,4 +34,4 @@ an easy way to communicate with the Paypal API, then you can use the plugin dire
 
     $plugin = $container->get('payment.plugin.paypal_express_checkout');
 
-.. _PaymentCoreBundle: http://github.com/schmittjoh/PaymentCoreBundle/Resources/doc/index.rst
+.. _PaymentCoreBundle: http://github.com/schmittjoh/JMSPaymentCoreBundle/Resources/doc/index.rst
