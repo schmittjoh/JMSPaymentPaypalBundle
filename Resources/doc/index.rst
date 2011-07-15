@@ -34,4 +34,4 @@ an easy way to communicate with the Paypal API, then you can use the plugin dire
 
     $plugin = $container->get('payment.plugin.paypal_express_checkout');
 
-.. _JMSPaymentCoreBundle: http://github.com/schmittjoh/JMSPaymentCoreBundle/Resources/doc/index.rst
+.. _JMSPaymentCoreBundle: https://github.com/schmittjoh/JMSPaymentCoreBundle/blob/master/Resources/doc/index.rst
