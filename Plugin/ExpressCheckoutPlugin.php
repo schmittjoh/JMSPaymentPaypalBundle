@@ -157,7 +157,6 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         }
 
         $details = $this->requestGetExpressCheckoutDetails($data->get('express_checkout_token'));
-
         // verify checkout status
         switch ($details->body->get('CHECKOUTSTATUS')) {
             case 'PaymentActionFailed':
@@ -169,6 +168,9 @@ class ExpressCheckoutPlugin extends PaypalPlugin
                 throw $ex;
 
             case 'PaymentCompleted':
+                break;
+
+            case 'PaymentActionNotInitiated':
                 break;
 
             default:
