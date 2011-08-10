@@ -61,7 +61,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         $parameters = array();
         if (Number::compare($transaction->getRequestedAmount(), $approveTransaction->getProcessedAmount()) !== 0) {
             $parameters['REFUNDTYPE'] = 'Partial';
-            $parameters['AMT'] = $transaction->getRequestedAmount();
+            $parameters['AMT'] = $this->convertAmountToPaypalFormat($transaction->getRequestedAmount());
             $parameters['CURRENCYCODE'] = $transaction->getCredit()->getPaymentInstruction()->getCurrency();
         }
 
@@ -143,7 +143,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
                 $this->getReturnUrl($data),
                 $this->getCancelUrl($data),
                 array(
-                      'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
+                    'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
                     'PAYMENTREQUEST_0_CURRENCYCODE'  => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
                 )
             );
@@ -157,7 +157,6 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         }
 
         $details = $this->requestGetExpressCheckoutDetails($data->get('express_checkout_token'));
-
         // verify checkout status
         switch ($details->body->get('CHECKOUTSTATUS')) {
             case 'PaymentActionFailed':
@@ -169,6 +168,9 @@ class ExpressCheckoutPlugin extends PaypalPlugin
                 throw $ex;
 
             case 'PaymentCompleted':
+                break;
+
+            case 'PaymentActionNotInitiated':
                 break;
 
             default:
