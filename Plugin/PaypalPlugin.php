@@ -86,7 +86,7 @@ abstract class PaypalPlugin extends GatewayPlugin
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoAuthorization',
             'TRANSACTIONID' => $transactionId,
-            'AMT' => $amount,
+            'AMT' => $this->convertAmountToPaypalFormat($amount),
         )));
     }
 
@@ -95,7 +95,7 @@ abstract class PaypalPlugin extends GatewayPlugin
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoCapture',
             'AUTHORIZATIONID' => $authorizationId,
-            'AMT' => $amount,
+            'AMT' => $this->convertAmountToPaypalFormat($amount),
             'COMPLETETYPE' => $completeType,
         )));
     }
@@ -113,7 +113,7 @@ abstract class PaypalPlugin extends GatewayPlugin
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoExpressCheckoutPayment',
             'TOKEN'  => $token,
-            'PAYMENTREQUEST_0_AMT' => $amount,
+            'PAYMENTREQUEST_0_AMT' => $this->convertAmountToPaypalFormat($amount),
             'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
             'PAYERID' => $payerId,
         )));
@@ -143,7 +143,7 @@ abstract class PaypalPlugin extends GatewayPlugin
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'SetExpressCheckout',
-            'PAYMENTREQUEST_0_AMT' => $amount,
+            'PAYMENTREQUEST_0_AMT' => $this->convertAmountToPaypalFormat($amount),
             'RETURNURL' => $returnUrl,
             'CANCELURL' => $cancelUrl,
         )));
@@ -205,5 +205,10 @@ abstract class PaypalPlugin extends GatewayPlugin
         }
 
         return $paypalResponse;
+    }
+
+    protected function convertAmountToPaypalFormat($amount)
+    {
+        return number_format($amount, 2, '.', '');
     }
 }
