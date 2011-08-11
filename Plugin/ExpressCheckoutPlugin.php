@@ -183,7 +183,14 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
-        $response = $this->requestDoExpressCheckoutPayment($data->get('express_checkout_token'), $transaction->getRequestedAmount(), $paymentAction, $details->body->get('PAYERID'));
+
+        $response = $this->requestDoExpressCheckoutPayment(
+            $data->get('express_checkout_token'),
+            $transaction->getRequestedAmount(),
+            $paymentAction,
+            $details->body->get('PAYERID'),
+            array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
+        );
 
         switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
             case 'Completed':
