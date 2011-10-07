@@ -136,13 +136,10 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
 
-        $opts = array();
-
-        foreach ($data->get('checkout_params') as $param => $value) {
-          $opts[$param] = $value;
-        }
+        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+
         // generate an express token if none exists, yet
         if (false === $data->has('express_checkout_token')) {
             $response = $this->requestSetExpressCheckout(
@@ -187,7 +184,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
-        
+
         $response = $this->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
