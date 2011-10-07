@@ -138,8 +138,8 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
         $opts = array();
 
-        foreach ($data->all() as $param => $value) {
-          $opts[$param] = $value[0];
+        foreach ($data->get('checkout_params') as $param => $value) {
+          $opts[$param] = $value;
         }
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
