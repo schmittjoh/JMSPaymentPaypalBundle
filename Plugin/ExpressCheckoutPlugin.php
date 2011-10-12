@@ -240,8 +240,8 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
     protected function getCancelUrl(ExtendedDataInterface $data)
     {
-        if ($data->has('return_url')) {
-            return $data->get('return_url');
+        if ($data->has('cancel_url')) {
+            return $data->get('cancel_url');
         }
         else if (0 !== strlen($this->cancelUrl)) {
             return $this->cancelUrl;
