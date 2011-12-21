@@ -1,0 +1,6 @@
+<?php
+
+$loader = include_once __DIR__ . '/../vendor/.composer/autoload.php';
+
+$loader->add('JMS\\Payment\\CoreBundle', __DIR__ . "/../vendor/makasim/payment-core-bundle");
+$loader->add('JMS\\Payment\\PaypalBundle', __DIR__ . "/../../../..");
