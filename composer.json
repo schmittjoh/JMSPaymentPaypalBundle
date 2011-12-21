@@ -5,10 +5,7 @@
     "homepage": "https://github.com/schmittjoh/JMSPaymentPaypalBundle",
     "license": "Apache",
     "require": {
-        "makasim/payment-core-bundle": "master"
-    },
-    "autoload": {
-        "psr-0": { "JMS\\Payment\\PaypalBundle": "" }
+        "makasim/payment-core-bundle": "master-dev"
     },
     "target-dir": "JMS/Payment/PaypalBundle"
 }
