@@ -1,11 +1,11 @@
 {
-    "name": "makasim/payment-paypal-bundle",
+    "name": "jms/payment-paypal-bundle",
     "type": "symfony-bundle",
     "description": "Payment Bundle providing access to the PayPal API",
     "homepage": "https://github.com/schmittjoh/JMSPaymentPaypalBundle",
     "license": "Apache",
     "require": {
-        "makasim/payment-core-bundle": "master-dev"
+        "jms/payment-core-bundle": "master-dev"
     },
     "target-dir": "JMS/Payment/PaypalBundle"
 }
