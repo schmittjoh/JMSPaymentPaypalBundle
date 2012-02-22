@@ -135,7 +135,8 @@ class ExpressCheckoutPlugin extends PaypalPlugin
     {
         $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
-
+        if($transaction->getPayment()->getId())
+            $data->set('return_url', $this->returnUrl."/".$transaction->getPayment()->getId(), false);
         $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
@@ -226,7 +227,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         );
     }
 
-    protected function getReturnUrl(ExtendedDataInterface $data)
+    protected function getReturnUrl(ExtendedDataInterface $data, $id)
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
