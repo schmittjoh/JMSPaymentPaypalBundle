@@ -144,7 +144,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         if (false === $data->has('express_checkout_token')) {
             $response = $this->requestSetExpressCheckout(
                 $transaction->getRequestedAmount(),
-                $this->getReturnUrl($data),
+                $this->getReturnUrl($data)."/".$transaction->getPayment()->getId(),
                 $this->getCancelUrl($data),
                 $opts
             );
