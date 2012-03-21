@@ -13,6 +13,8 @@
         <parameter key="payment.paypal.username"></parameter>
         <parameter key="payment.paypal.password"></parameter>
         <parameter key="payment.paypal.signature"></parameter>
+        
+        <parameter key="payment.form.paypal_express_checkout_type.class">JMS\Payment\PaypalBundle\Form\ExpressCheckoutType</parameter>
     </parameters>
 
     <services>
@@ -30,6 +32,11 @@
             <argument type="service" id="payment.paypal.authentication_strategy" />
             <argument>%payment.paypal.debug%</argument>
             <tag name="payment.plugin" />
+        </service>
+        
+        <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%">
+            <tag name="payment.method_form_type" />
+            <tag name="form.type" alias="paypal_express_checkout" />
         </service>
     </services>
 </container>
