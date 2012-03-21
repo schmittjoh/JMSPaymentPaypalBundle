@@ -185,6 +185,9 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
+	// Add the Payment-Details to the extendedData
+	$data->set('payment_details' , $details);
+
         $response = $this->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
