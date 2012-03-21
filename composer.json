@@ -2,10 +2,20 @@
     "name": "jms/payment-paypal-bundle",
     "type": "symfony-bundle",
     "description": "Payment Bundle providing access to the PayPal API",
+    "keywords": ["payment", "paypal"],
     "homepage": "https://github.com/schmittjoh/JMSPaymentPaypalBundle",
     "license": "Apache",
+    "authors": [
+        {
+            "name": "Johannes M. Schmitt",
+            "email": "schmittjoh@gmail.com"
+        }
+    ],
     "require": {
         "jms/payment-core-bundle": "master-dev"
+    },
+    "autoload": {
+        "psr-0": { "JMS\\Payment\\PaypalBundle": "" }
     },
     "target-dir": "JMS/Payment/PaypalBundle"
 }
