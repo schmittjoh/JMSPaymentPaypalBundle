@@ -17,5 +17,5 @@
     "autoload": {
         "psr-0": { "JMS\\Payment\\PaypalBundle": "" }
     },
-    "target-dir": "JMS\\Payment\\PaypalBundle"
+    "target-dir": "JMS/Payment/PaypalBundle"
 }
