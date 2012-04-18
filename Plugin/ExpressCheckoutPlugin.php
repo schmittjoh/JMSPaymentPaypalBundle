@@ -4,14 +4,15 @@ namespace JMS\Payment\PaypalBundle\Plugin;
 
 use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
-use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
-use JMS\Payment\CoreBundle\Plugin\Exception\BlockedException;
 use JMS\Payment\CoreBundle\Plugin\PluginInterface;
+use JMS\Payment\CoreBundle\Plugin\AbstractPlugin;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
 use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
 use JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl;
 use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
 use JMS\Payment\CoreBundle\Util\Number;
-use JMS\Payment\PaypalBundle\Authentication\AuthenticationStrategyInterface;
+use JMS\Payment\PaypalBundle\Client\Client;
+use JMS\Payment\PaypalBundle\Client\Response;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -29,15 +30,31 @@ use JMS\Payment\PaypalBundle\Authentication\AuthenticationStrategyInterface;
  * limitations under the License.
  */
 
-class ExpressCheckoutPlugin extends PaypalPlugin
+class ExpressCheckoutPlugin extends AbstractPlugin
 {
+    /**
+     * @var string
+     */
     protected $returnUrl;
+
+    /**
+     * @var string
+     */
     protected $cancelUrl;
 
-    public function __construct($returnUrl, $cancelUrl, AuthenticationStrategyInterface $authenticationStrategy, $isDebug)
-    {
-        parent::__construct($authenticationStrategy, $isDebug);
+    /**
+     * @var \JMS\Payment\PaypalBundle\Client\Client
+     */
+    protected $client;
 
+    /**
+     * @param string $returnUrl
+     * @param string $cancelUrl
+     * @param \JMS\Payment\PaypalBundle\Client\Client $client
+     */
+    public function __construct($returnUrl, $cancelUrl, Client $client)
+    {
+        $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
     }
@@ -54,18 +71,19 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
     public function credit(FinancialTransactionInterface $transaction, $retry)
     {
-        $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
         $approveTransaction = $transaction->getCredit()->getPayment()->getApproveTransaction();
 
         $parameters = array();
         if (Number::compare($transaction->getRequestedAmount(), $approveTransaction->getProcessedAmount()) !== 0) {
             $parameters['REFUNDTYPE'] = 'Partial';
-            $parameters['AMT'] = $this->convertAmountToPaypalFormat($transaction->getRequestedAmount());
+            $parameters['AMT'] = $this->client->convertAmountToPaypalFormat($transaction->getRequestedAmount());
             $parameters['CURRENCYCODE'] = $transaction->getCredit()->getPaymentInstruction()->getCurrency();
         }
 
-        $response = $this->requestRefundTransaction($data->get('authorization_id'), $parameters);
+        $response = $this->client->requestRefundTransaction($data->get('authorization_id'), $parameters);
+
+        $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
         $transaction->setProcessedAmount($response->body->get('NETREFUNDAMT'));
@@ -74,7 +92,6 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
     public function deposit(FinancialTransactionInterface $transaction, $retry)
     {
-        $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
         $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
 
@@ -85,10 +102,13 @@ class ExpressCheckoutPlugin extends PaypalPlugin
             $completeType = 'NotComplete';
         }
 
-        $this->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+        $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
         ));
-        $details = $this->requestGetTransactionDetails($authorizationId);
+        $this->throwUnlessSuccessResponse($response, $transaction);
+
+        $details = $this->client->requestGetTransactionDetails($authorizationId);
+        $this->throwUnlessSuccessResponse($details, $transaction);
 
         switch ($details->body->get('PAYMENTSTATUS')) {
             case 'Completed':
@@ -116,7 +136,8 @@ class ExpressCheckoutPlugin extends PaypalPlugin
     {
         $data = $transaction->getExtendedData();
 
-        $this->requestDoVoid($data->get('authorization_id'));
+        $response = $this->client->requestDoVoid($data->get('authorization_id'));
+        $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
@@ -133,31 +154,13 @@ class ExpressCheckoutPlugin extends PaypalPlugin
 
     protected function createCheckoutBillingAgreement(FinancialTransactionInterface $transaction, $paymentAction)
     {
-        $this->currentTransaction = $transaction;
         $data = $transaction->getExtendedData();
 
-        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
-        $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
-        $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+        $token = $this->obtainExpressCheckoutToken($transaction, $paymentAction);
 
-        // generate an express token if none exists, yet
-        if (false === $data->has('express_checkout_token')) {
-            $response = $this->requestSetExpressCheckout(
-                $transaction->getRequestedAmount(),
-                $this->getReturnUrl($data),
-                $this->getCancelUrl($data),
-                $opts
-            );
-            $data->set('express_checkout_token', $response->body->get('TOKEN'));
+        $details = $this->client->requestGetExpressCheckoutDetails($token);
+        $this->throwUnlessSuccessResponse($details, $transaction);
 
-            $actionRequest = new ActionRequiredException('User must authorize the transaction.');
-            $actionRequest->setFinancialTransaction($transaction);
-            $actionRequest->setAction(new VisitUrl($this->getExpressUrl($response->body->get('TOKEN'))));
-
-            throw $actionRequest;
-        }
-
-        $details = $this->requestGetExpressCheckoutDetails($data->get('express_checkout_token'));
         // verify checkout status
         switch ($details->body->get('CHECKOUTSTATUS')) {
             case 'PaymentActionFailed':
@@ -177,7 +180,7 @@ class ExpressCheckoutPlugin extends PaypalPlugin
             default:
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->getExpressUrl($data->get('express_checkout_token'))));
+                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
 
                 throw $actionRequest;
         }
@@ -185,13 +188,14 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
-        $response = $this->requestDoExpressCheckoutPayment(
+        $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
             array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
         );
+        $this->throwUnlessSuccessResponse($response, $transaction);
 
         switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
             case 'Completed':
@@ -215,15 +219,63 @@ class ExpressCheckoutPlugin extends PaypalPlugin
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
 
-    protected function getExpressUrl($token)
+    /**
+     * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
+     * @param string $paymentAction
+     *
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException if user has to authenticate the token
+     *
+     * @return string
+     */
+    protected function obtainExpressCheckoutToken(FinancialTransactionInterface $transaction, $paymentAction)
     {
-        $host = $this->isDebug() ? 'www.sandbox.paypal.com' : 'www.paypal.com';
+        $data = $transaction->getExtendedData();
+        if ($data->has('express_checkout_token')) {
+            return $data->get('express_checkout_token');
+        }
 
-        return sprintf(
-            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s',
-            $host,
-            $token
+        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
+        $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
+        $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+
+        $response = $this->client->requestSetExpressCheckout(
+            $transaction->getRequestedAmount(),
+            $this->getReturnUrl($data),
+            $this->getCancelUrl($data),
+            $opts
         );
+        $this->throwUnlessSuccessResponse($response, $transaction);
+
+        $data->set('express_checkout_token', $response->body->get('TOKEN'));
+
+        $authenticateTokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl($response->body->get('TOKEN'));
+
+        $actionRequest = new ActionRequiredException('User must authorize the transaction.');
+        $actionRequest->setFinancialTransaction($transaction);
+        $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
+
+        throw $actionRequest;
+    }
+
+    /**
+     * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
+     * @param \JMS\Payment\PaypalBundle\Client\Response $response
+     * @return null
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
+     */
+    protected function throwUnlessSuccessResponse(Response $response, FinancialTransactionInterface $transaction)
+    {
+        if ($response->isSuccess()) {
+            return;
+        }
+
+        $transaction->setResponseCode($response->body->get('ACK'));
+        $transaction->setReasonCode($response->body->get('L_ERRORCODE0'));
+
+        $ex = new FinancialException('PayPal-Response was not successful: '.$response);
+        $ex->setFinancialTransaction($transaction);
+
+        throw $ex;
     }
 
     protected function getReturnUrl(ExtendedDataInterface $data)
