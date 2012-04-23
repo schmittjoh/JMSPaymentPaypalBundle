@@ -3,6 +3,7 @@
 namespace JMS\Payment\PaypalBundle\Tests\Plugin;
 
 use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
 use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
 use JMS\Payment\CoreBundle\Entity\Payment;
 use JMS\Payment\CoreBundle\Entity\ExtendedData;
@@ -296,6 +297,55 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         $transaction->getExtendedData()->set('express_checkout_token', $expectedToken);
 
         $plugin->approve($transaction, false);
+    }
+
+    public function testSetTransactionIdAsReferenceCodeToTransactionIfPaymentStatusPending()
+    {
+        $expectedTransactionId = 'the_transaction_id';
+
+        $requestGetExpressCheckoutDetailsResponse = new Response(array(
+            'ACK' => 'Success',
+            'CHECKOUTSTATUS' => 'PaymentCompleted'
+        ));
+
+        $requestDoExpressCheckoutPaymentResponse = new Response(array(
+            'ACK' => 'Success',
+            'PAYMENTINFO_0_PAYMENTSTATUS' => 'Pending',
+            'PAYMENTINFO_0_TRANSACTIONID' => $expectedTransactionId,
+        ));
+
+        $clientMock = $this->createClientMock($mockedMethods = array(
+            'requestGetExpressCheckoutDetails', 
+            'requestSetExpressCheckout',
+            'requestDoExpressCheckoutPayment'
+        ));
+        $clientMock
+            ->expects($this->never())
+            ->method('requestSetExpressCheckout')
+        ;
+        $clientMock
+            ->expects($this->once())
+            ->method('requestGetExpressCheckoutDetails')
+            ->will($this->returnValue($requestGetExpressCheckoutDetailsResponse))
+        ;
+        $clientMock
+            ->expects($this->once())
+            ->method('requestDoExpressCheckoutPayment')
+            ->will($this->returnValue($requestDoExpressCheckoutPaymentResponse))
+        ;
+
+        $plugin = new ExpressCheckoutPlugin('return_url', 'cancel_url', $clientMock);
+
+        $transaction = $this->createTransaction($amount = 100, 'EUR');
+        $transaction->getExtendedData()->set('express_checkout_token', 'a_token');
+
+        try {
+            $plugin->approve($transaction, false);
+            $this->fail('Plugin was expected to throw an exception.');
+        }
+        catch (PaymentPendingException $ex) {
+            $this->assertEquals($expectedTransactionId, $transaction->getReferenceNumber());
+        }
     }
 
     /**
