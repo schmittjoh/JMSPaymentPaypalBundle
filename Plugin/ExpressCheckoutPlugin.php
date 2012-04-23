@@ -202,6 +202,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
+                $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
+                
                 throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
 
             default:
