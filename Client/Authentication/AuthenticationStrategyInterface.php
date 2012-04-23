@@ -1,6 +1,6 @@
 <?php
 
-namespace JMS\Payment\PaypalBundle\Authentication;
+namespace JMS\Payment\PaypalBundle\Client\Authentication;
 
 use JMS\Payment\CoreBundle\BrowserKit\Request;
 

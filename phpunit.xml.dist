@@ -6,4 +6,10 @@
             <directory suffix="Test.php">./Tests</directory>
         </testsuite>
     </testsuites>
+
+    <php>
+        <server name="API_USERNAME" value="schmit_1283340315_biz_api1.gmail.com" />
+        <server name="API_PASSWORD" value="1283340321" />
+        <server name="API_SIGNATURE" value="A93vj6VJ.ZIRNjbI6GFgi4N2Km.5ATLs-EinlyWk2htEGX0xc3L8YIBo" />
+    </php>
 </phpunit>

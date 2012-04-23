@@ -1,23 +1,11 @@
 <?php
+namespace JMS\Payment\PaypalBundle\Client;
 
-namespace JMS\Payment\PaypalBundle\Plugin;
+use Symfony\Component\BrowserKit\Response as RawResponse;
 
-use JMS\Payment\CoreBundle\Model\CreditInterface;
-use JMS\Payment\CoreBundle\Model\PaymentInterface;
-use JMS\Payment\CoreBundle\Plugin\Exception\FunctionNotSupportedException;
-use JMS\Payment\CoreBundle\Model\PaymentInstructionInterface;
-use JMS\Payment\PaypalBundle\Gateway\Response;
-use JMS\Payment\PaypalBundle\Gateway\ErrorResponse;
-use JMS\Payment\CoreBundle\Plugin\QueryablePluginInterface;
 use JMS\Payment\CoreBundle\BrowserKit\Request;
-use JMS\Payment\CoreBundle\Plugin\GatewayPlugin;
-use JMS\Payment\PaypalBundle\Authentication\AuthenticationStrategyInterface;
-use JMS\Payment\PaypalBundle\Plugin\Exception\InvalidPayerException;
-use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
-use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
-use JMS\Payment\CoreBundle\Plugin\Exception\InternalErrorException;
 use JMS\Payment\CoreBundle\Plugin\Exception\CommunicationException;
-use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
+use JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -35,24 +23,21 @@ use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
  * limitations under the License.
  */
 
-/**
- * Implements the NVP API but does not perform any actual transactions
- *
- * @see https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/howto_api_reference
- * @author Johannes M. Schmitt <schmittjoh@gmail.com>
- */
-abstract class PaypalPlugin extends GatewayPlugin
+class Client
 {
     const API_VERSION = '65.1';
 
     protected $authenticationStrategy;
-    protected $currentTransaction;
+
+    protected $isDebug;
+
+    protected $curlOptions;
 
     public function __construct(AuthenticationStrategyInterface $authenticationStrategy, $isDebug)
     {
-        parent::__construct($isDebug);
-
         $this->authenticationStrategy = $authenticationStrategy;
+        $this->isDebug = !!$isDebug;
+        $this->curlOptions = array();
     }
 
     public function requestAddressVerify($email, $street, $postalCode)
@@ -180,7 +165,7 @@ abstract class PaypalPlugin extends GatewayPlugin
 
         // setup request, and authenticate it
         $request = new Request(
-            $this->authenticationStrategy->getApiEndpoint($this->isDebug()),
+            $this->authenticationStrategy->getApiEndpoint($this->isDebug),
             'POST',
             $parameters
         );
@@ -194,21 +179,123 @@ abstract class PaypalPlugin extends GatewayPlugin
         $parameters = array();
         parse_str($response->getContent(), $parameters);
 
-        $paypalResponse = new Response($parameters);
-        if (false === $paypalResponse->isSuccess()) {
-            $ex = new FinancialException('PayPal-Response was not successful: '.$paypalResponse);
-            $ex->setFinancialTransaction($this->currentTransaction);
-            $this->currentTransaction->setResponseCode($paypalResponse->body->get('ACK'));
-            $this->currentTransaction->setReasonCode($paypalResponse->body->get('L_ERRORCODE0'));
-
-            throw $ex;
-        }
-
-        return $paypalResponse;
+        return new Response($parameters);
     }
 
-    protected function convertAmountToPaypalFormat($amount)
+    public function getAuthenticateExpressCheckoutTokenUrl($token)
+    {
+        $host = $this->isDebug ? 'www.sandbox.paypal.com' : 'www.paypal.com';
+
+        return sprintf(
+            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s',
+            $host,
+            $token
+        );
+    }
+
+    public function convertAmountToPaypalFormat($amount)
     {
         return number_format($amount, 2, '.', '');
+    }
+
+    public function setCurlOption($name, $value)
+    {
+        $this->curlOptions[$name] = $value;
+    }
+
+    /**
+     * A small helper to url-encode an array
+     *
+     * @param array $encode
+     * @return string
+     */
+    protected function urlEncodeArray(array $encode)
+    {
+        $encoded = '';
+        foreach ($encode as $name => $value) {
+            $encoded .= '&'.urlencode($name).'='.urlencode($value);
+        }
+
+        return substr($encoded, 1);
+    }
+
+    /**
+     * Performs a request to an external payment service
+     *
+     * @throws CommunicationException when an curl error occurs
+     * @param Request $request
+     * @param mixed $parameters either an array for form-data, or an url-encoded string
+     * @return Response
+     */
+    public function request(Request $request)
+    {
+        if (!extension_loaded('curl')) {
+            throw new \RuntimeException('The cURL extension must be loaded.');
+        }
+
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt_array($curl, $this->curlOptions);
+        curl_setopt($curl, CURLOPT_URL, $request->getUri());
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
+
+        // add headers
+        $headers = array();
+        foreach ($request->headers->all() as $name => $value) {
+            if (is_array($value)) {
+                foreach ($value as $subValue) {
+                    $headers[] = sprintf('%s: %s', $name, $subValue);
+                }
+            } else {
+                $headers[] = sprintf('%s: %s', $name, $value);
+            }
+        }
+        if (count($headers) > 0) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+        }
+
+        // set method
+        $method = strtoupper($request->getMethod());
+        if ('POST' === $method) {
+            curl_setopt($curl, CURLOPT_POST, true);
+
+            if (!$request->headers->has('Content-Type') || 'multipart/form-data' !== $request->headers->get('Content-Type')) {
+                $postFields = $this->urlEncodeArray($request->request->all());
+            } else {
+                $postFields = $request->request->all();
+            }
+
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $postFields);
+        } else if ('PUT' === $method) {
+            curl_setopt($curl, CURLOPT_PUT, true);
+        } else if ('HEAD' === $method) {
+            curl_setopt($curl, CURLOPT_NOBODY, true);
+        }
+
+        // perform the request
+        if (false === $returnTransfer = curl_exec($curl)) {
+            throw new CommunicationException(
+                'cURL Error: '.curl_error($curl), curl_errno($curl)
+            );
+        }
+
+        $headerSize = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+        $headers = array();
+        if (preg_match_all('#^([^:\r\n]+):\s+([^\n\r]+)#m', substr($returnTransfer, 0, $headerSize), $matches)) {
+            foreach ($matches[1] as $key => $name) {
+                $headers[$name] = $matches[2][$key];
+            }
+        }
+
+        $response = new RawResponse(
+            substr($returnTransfer, $headerSize),
+            curl_getinfo($curl, CURLINFO_HTTP_CODE),
+            $headers
+        );
+        curl_close($curl);
+
+        return $response;
     }
 }
