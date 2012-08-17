@@ -22,8 +22,7 @@ Usage
 =====
 With the Payment Plugin Controller (Recommended)
 ------------------------------------------------
-See the DemoController that is part of the JMSPaymentCoreBundle_ for a sample usage:
-https://github.com/schmittjoh/JMSPaymentCoreBundle/blob/master/Controller/DemoController.php
+http://jmsyst.com/bundles/JMSPaymentCoreBundle/master/usage
 
 Without the Payment Plugin Controller
 -------------------------------------
