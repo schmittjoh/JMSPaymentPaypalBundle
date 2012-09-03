@@ -34,3 +34,9 @@ an easy way to communicate with the Paypal API, then you can use the plugin dire
     $plugin = $container->get('payment.plugin.paypal_express_checkout');
 
 .. _JMSPaymentCoreBundle: https://github.com/schmittjoh/JMSPaymentCoreBundle/blob/master/Resources/doc/index.rst
+
+Sandbox environment
+-------------------
+Connections are automatically made to PayPal's Sandbox environment when the Symfony 
+kernel is running in debug mode. In non-debug mode, connections are made to PayPal's production 
+environment.
