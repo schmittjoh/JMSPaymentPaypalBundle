@@ -155,7 +155,6 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected function createCheckoutBillingAgreement(FinancialTransactionInterface $transaction, $paymentAction)
     {
         $data = $transaction->getExtendedData();
-
         $token = $this->obtainExpressCheckoutToken($transaction, $paymentAction);
 
         $details = $this->client->requestGetExpressCheckoutDetails($token);
@@ -180,7 +179,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             default:
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
+                $actionRequest->setAction(new VisitUrl(
+                  $this->client->getAuthenticateExpressCheckoutTokenUrl($token, $this->getUseraction($data))));
 
                 throw $actionRequest;
         }
@@ -250,7 +250,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         $data->set('express_checkout_token', $response->body->get('TOKEN'));
 
-        $authenticateTokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl($response->body->get('TOKEN'));
+        $authenticateTokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl(
+          $response->body->get('TOKEN'), $this->getUseraction($data));
+        echo $authenticateTokenUrl;
 
         $actionRequest = new ActionRequiredException('User must authorize the transaction.');
         $actionRequest->setFinancialTransaction($transaction);
@@ -278,6 +280,16 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $ex->setFinancialTransaction($transaction);
 
         throw $ex;
+    }
+
+    protected function getUseraction(ExtendedDataInterface $data)
+    {
+        if ($data->has('paypal_useraction')) {
+            return $data->get('paypal_useraction');
+        }
+        else {
+            return null;
+        }
     }
 
     protected function getReturnUrl(ExtendedDataInterface $data)

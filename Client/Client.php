@@ -182,14 +182,21 @@ class Client
         return new Response($parameters);
     }
 
-    public function getAuthenticateExpressCheckoutTokenUrl($token)
+    public function getAuthenticateExpressCheckoutTokenUrl($token, $useraction=null)
     {
         $host = $this->isDebug ? 'www.sandbox.paypal.com' : 'www.paypal.com';
 
+        $otherParams = "";
+        if ($useraction != null)
+        {
+          $otherParams = sprintf("&useraction=%s", urlencode($useraction));
+        }
+
         return sprintf(
-            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s',
+            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s%s',
             $host,
-            $token
+            $token,
+            $otherParams
         );
     }
 
