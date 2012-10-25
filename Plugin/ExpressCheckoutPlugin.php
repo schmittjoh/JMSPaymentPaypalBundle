@@ -188,12 +188,26 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
+        // build the optional parameters to send to Client method
+        $optionalParameters = array(
+        	'PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+        );
+        
+        /*
+         * check if the express checkout details contain a NOTIFYURL and add that to the optional parameters
+         * From PayPal documentation:
+         *     The notify URL applies only to DoExpressCheckoutPayment. This value is ignored when 
+         *     set in SetExpressCheckout or GetExpressCheckoutDetails.
+         */ 
+        if($response->body->has('NOTIFYURL'))
+        	$optionalParameters['PAYMENTREQUEST_0_NOTIFYURL'] = urldecode($details->body->get('NOTIFYURL'));
+
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
+            $optionalParameters
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
