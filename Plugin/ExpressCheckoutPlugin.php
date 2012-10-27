@@ -188,12 +188,30 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
+        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
+        $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+
+        if ($data->has('checkout_items'))
+        {
+            $itemsAmount = 0.00;
+            $idx = 0;
+            foreach($data->get('checkout_items') as $item)
+            {
+                $opts['L_PAYMENTREQUEST_0_ITEMCATEGORY' . $idx] = $item['category'];
+                $opts['L_PAYMENTREQUEST_0_NAME' . $idx] = $item['label'];
+                $opts['L_PAYMENTREQUEST_0_QTY' . $idx] = $item['quantity'];
+                $opts['L_PAYMENTREQUEST_0_AMT' . $idx] = $item['unit_price'];
+                $itemsAmount += $item['unit_price'] * $item['quantity'];
+                $idx++;
+            }
+            $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
+        }
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
+            $opts
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
@@ -239,6 +257,22 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+
+        if ($data->has('checkout_items'))
+        {
+            $itemsAmount = 0.00;
+            $idx = 0;
+            foreach($data->get('checkout_items') as $item)
+            {
+                $opts['L_PAYMENTREQUEST_0_ITEMCATEGORY' . $idx] = $item['category'];
+                $opts['L_PAYMENTREQUEST_0_NAME' . $idx] = $item['label'];
+                $opts['L_PAYMENTREQUEST_0_QTY' . $idx] = $item['quantity'];
+                $opts['L_PAYMENTREQUEST_0_AMT' . $idx] = $item['unit_price'];
+                $itemsAmount += $item['unit_price'] * $item['quantity'];
+                $idx++;
+            }
+            $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
+        }
 
         $response = $this->client->requestSetExpressCheckout(
             $transaction->getRequestedAmount(),
