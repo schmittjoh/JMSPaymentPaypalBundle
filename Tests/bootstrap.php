@@ -1,6 +1,6 @@
 <?php
 
-$composerAutoloadFile = __DIR__ . '/../vendor/.composer/autoload.php';
+$composerAutoloadFile = __DIR__ . '/../vendor/autoload.php';
 if (false == file_exists($composerAutoloadFile)) {
     die("The composer autoload file \"".$composerAutoloadFile."\" was not found.\n\nDidn't you forget to run \"php composer.phar install\"?\n");
 }
