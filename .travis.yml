@@ -5,6 +5,3 @@ php:
 
 before_script:
   - composer install --dev
-
-notifications:
-  - tassi.francesco@gmail.com
