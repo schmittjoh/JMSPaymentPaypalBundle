@@ -8,6 +8,7 @@
         <parameter key="payment.plugin.paypal_express_checkout.class">JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin</parameter>
         <parameter key="payment.paypal.express_checkout.return_url"></parameter>
         <parameter key="payment.paypal.express_checkout.cancel_url"></parameter>
+        <parameter key="payment.paypal.express_checkout.notify_url"></parameter>
 
         <parameter key="payment.paypal.authentication_strategy.token.class">JMS\Payment\PaypalBundle\Client\Authentication\TokenAuthenticationStrategy</parameter>
         <parameter key="payment.paypal.username"></parameter>
@@ -31,7 +32,9 @@
         <service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%">
             <argument>%payment.paypal.express_checkout.return_url%</argument>
             <argument>%payment.paypal.express_checkout.cancel_url%</argument>
+            <argument>%payment.paypal.express_checkout.notify_url%</argument>
             <argument type="service" id="payment.paypal.client" />
+            <argument type="service" id="logger" />
             <tag name="payment.plugin" />
         </service>
 

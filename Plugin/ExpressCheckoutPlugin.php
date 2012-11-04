@@ -6,6 +6,7 @@ use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
 use JMS\Payment\CoreBundle\Plugin\PluginInterface;
 use JMS\Payment\CoreBundle\Plugin\AbstractPlugin;
+use JMS\Payment\CoreBundle\Plugin\NotifiablePluginInterface;
 use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
 use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
 use JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl;
@@ -30,7 +31,7 @@ use JMS\Payment\PaypalBundle\Client\Response;
  * limitations under the License.
  */
 
-class ExpressCheckoutPlugin extends AbstractPlugin
+class ExpressCheckoutPlugin extends AbstractPlugin implements NotifiablePluginInterface
 {
     /**
      * @var string
@@ -43,20 +44,31 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $cancelUrl;
 
     /**
+     * @var string
+     */
+    protected $notifyUrl;
+
+    /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
     protected $client;
 
+    protected $logger;
+
     /**
      * @param string $returnUrl
      * @param string $cancelUrl
+     * @param string $notifyUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
+     * @param string $logger
      */
-    public function __construct($returnUrl, $cancelUrl, Client $client)
+    public function __construct($returnUrl, $cancelUrl, $notifyUrl, Client $client, $logger)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
+        $this->notifyUrl = $notifyUrl;
+        $this->logger = $logger;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -142,6 +154,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
+    public function instantPaymentNotification(array $parameters)
+    {
+        if ($client->checkIPN($parameters))
+        {
+            return true;
+        }
+        return false;
+    }
+
     public function processes($paymentSystemName)
     {
         return 'paypal_express_checkout' === $paymentSystemName;
@@ -206,6 +227,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             }
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
+
+        $this->logger->info('notify ?');
+        if ($data->has('notify_url'))
+        {
+            $this->logger->info('notify_url: '.$data->get('notify_url'));
+            $opts['NOTIFYURL'] = $data->get('notify_url');
+        }
+
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
@@ -274,6 +303,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
 
+        if (!is_null($this->getReturnUrl($data)))
+        {
+            $opts['NOTIFYURL'] = $this->getReturnUrl($data);
+        }
+
         $response = $this->client->requestSetExpressCheckout(
             $transaction->getRequestedAmount(),
             $this->getReturnUrl($data),
@@ -336,5 +370,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         }
 
         throw new \RuntimeException('You must configure a cancel url.');
+    }
+
+    protected function getNotifyUrl(ExtendedDataInterface $data)
+    {
+        if ($data->has('notify_url')) {
+            return $data->get('notify_url');
+        }
+        else {
+            return $this->notifyUrl;
+        }
     }
 }
