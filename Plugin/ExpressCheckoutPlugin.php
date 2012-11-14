@@ -31,7 +31,7 @@ use JMS\Payment\PaypalBundle\Client\Response;
  * limitations under the License.
  */
 
-class ExpressCheckoutPlugin extends AbstractPlugin implements NotifiablePluginInterface
+class ExpressCheckoutPlugin extends AbstractPlugin
 {
     /**
      * @var string
@@ -53,22 +53,18 @@ class ExpressCheckoutPlugin extends AbstractPlugin implements NotifiablePluginIn
      */
     protected $client;
 
-    protected $logger;
-
     /**
      * @param string $returnUrl
      * @param string $cancelUrl
      * @param string $notifyUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
-     * @param string $logger
      */
-    public function __construct($returnUrl, $cancelUrl, $notifyUrl, Client $client, $logger)
+    public function __construct($returnUrl, $cancelUrl, $notifyUrl, Client $client)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
         $this->notifyUrl = $notifyUrl;
-        $this->logger = $logger;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -154,14 +150,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin implements NotifiablePluginIn
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
-    public function instantPaymentNotification(array $parameters)
-    {
-        if ($client->checkIPN($parameters))
-        {
-            return true;
-        }
-        return false;
-    }
+    // public function instantPaymentNotification(array $parameters)
+    // {
+    //     if ($client->checkIPN($parameters))
+    //     {
+    //         return true;
+    //     }
+    //     return false;
+    // }
 
     public function processes($paymentSystemName)
     {
@@ -228,10 +224,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin implements NotifiablePluginIn
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
 
-        $this->logger->info('notify ?');
         if ($data->has('notify_url'))
         {
-            $this->logger->info('notify_url: '.$data->get('notify_url'));
             $opts['NOTIFYURL'] = $data->get('notify_url');
         }
 
