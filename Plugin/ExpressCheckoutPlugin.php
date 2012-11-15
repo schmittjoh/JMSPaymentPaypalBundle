@@ -297,9 +297,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
 
-        if (!is_null($this->getReturnUrl($data)))
+        if (!is_null($this->getNotifyUrl($data)))
         {
-            $opts['NOTIFYURL'] = $this->getReturnUrl($data);
+            $opts['NOTIFYURL'] = $this->getNotifyUrl($data);
         }
 
         $response = $this->client->requestSetExpressCheckout(
