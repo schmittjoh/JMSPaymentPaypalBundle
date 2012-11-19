@@ -150,15 +150,6 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
-    // public function instantPaymentNotification(array $parameters)
-    // {
-    //     if ($client->checkIPN($parameters))
-    //     {
-    //         return true;
-    //     }
-    //     return false;
-    // }
-
     public function processes($paymentSystemName)
     {
         return 'paypal_express_checkout' === $paymentSystemName;
