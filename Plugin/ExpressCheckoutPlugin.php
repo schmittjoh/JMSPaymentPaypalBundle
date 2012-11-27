@@ -44,11 +44,6 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $cancelUrl;
 
     /**
-     * @var string
-     */
-    protected $notifyUrl;
-
-    /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
     protected $client;
@@ -56,15 +51,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     /**
      * @param string $returnUrl
      * @param string $cancelUrl
-     * @param string $notifyUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
      */
-    public function __construct($returnUrl, $cancelUrl, $notifyUrl, Client $client)
+    public function __construct($returnUrl, $cancelUrl, Client $client)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
-        $this->notifyUrl = $notifyUrl;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -215,6 +208,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
 
+        // to enable Paypal Instant Payment Notifications
         if ($data->has('notify_url'))
         {
             $opts['NOTIFYURL'] = $data->get('notify_url');
@@ -288,9 +282,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $opts['PAYMENTREQUEST_0_ITEMAMT'] = $itemsAmount;
         }
 
-        if (!is_null($this->getNotifyUrl($data)))
+        // to enable Paypal Instant Payment Notifications
+        if ($data->has('notify_url'))
         {
-            $opts['NOTIFYURL'] = $this->getNotifyUrl($data);
+            $opts['NOTIFYURL'] = $data->get('notify_url');
         }
 
         $response = $this->client->requestSetExpressCheckout(
