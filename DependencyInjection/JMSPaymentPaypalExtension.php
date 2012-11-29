@@ -40,6 +40,7 @@ class JMSPaymentPaypalExtension extends Extension
         $container->setParameter('payment.paypal.signature', $config['signature']);
         $container->setParameter('payment.paypal.express_checkout.return_url', $config['return_url']);
         $container->setParameter('payment.paypal.express_checkout.cancel_url', $config['cancel_url']);
+        $container->setParameter('payment.paypal.express_checkout.notify_url', $config['notify_url']);
         $container->setParameter('payment.paypal.debug', $config['debug']);
     }
 }

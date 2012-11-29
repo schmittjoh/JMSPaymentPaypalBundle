@@ -182,6 +182,30 @@ class Client
         return new Response($parameters);
     }
 
+    public function checkIPN(array $parameters)
+    {
+        // include command
+        $request = new Request(
+            $this->authenticationStrategy->getApiEndpoint($this->isDebug),
+            'POST',
+            array_merge(array(
+                'cmd' => '_notify-validate'
+            ), $parameters)
+        );
+
+        $response = $this->request($request);
+        if (200 !== $response->getStatus()) {
+            throw new CommunicationException('The API request was not successful (Status: '.$response->getStatus().'): '.$response->getContent());
+        }
+
+        if (strcmp ($response->getContent(), "VERIFIED") == 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getAuthenticateExpressCheckoutTokenUrl($token)
     {
         $host = $this->isDebug ? 'www.sandbox.paypal.com' : 'www.paypal.com';
