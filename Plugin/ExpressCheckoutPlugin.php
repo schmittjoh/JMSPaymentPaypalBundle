@@ -2,6 +2,7 @@
 
 namespace JMS\Payment\PaypalBundle\Plugin;
 
+use Symfony\Component\HttpFoundation\Request;
 use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
 use JMS\Payment\CoreBundle\Plugin\PluginInterface;
@@ -141,6 +142,25 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+    }
+
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @return boolean true if the notification is valid
+     */
+    public function checkNotify(Request $request)
+    {
+        // Parse parameters
+        $parameters = array();
+        foreach($request->request->all() as $keyval) {
+            $keyval = explode ('=', $keyval);
+            if (count($keyval) == 2) {
+                $parameters[$keyval[0]] = urldecode($keyval[1]);
+            }
+        }
+
+        // Verify notification
+        return $this->client->checkIPN($paremeters);
     }
 
     public function processes($paymentSystemName)
