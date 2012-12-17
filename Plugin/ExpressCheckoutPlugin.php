@@ -199,7 +199,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
          *     The notify URL applies only to DoExpressCheckoutPayment. This value is ignored when 
          *     set in SetExpressCheckout or GetExpressCheckoutDetails.
          */ 
-        if($response->body->has('NOTIFYURL'))
+        if($details->body->has('NOTIFYURL'))
         	$optionalParameters['PAYMENTREQUEST_0_NOTIFYURL'] = urldecode($details->body->get('NOTIFYURL'));
 
         $response = $this->client->requestDoExpressCheckoutPayment(
