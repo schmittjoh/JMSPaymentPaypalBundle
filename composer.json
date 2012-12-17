@@ -16,6 +16,9 @@
         "symfony/framework-bundle": ">=2.0,<2.2-dev",
         "jms/payment-core-bundle": "dev-master"
     },
+    "require-dev": {
+        "symfony/browser-kit": "2.1.x-dev"
+    },
     "autoload": {
         "psr-0": { "JMS\\Payment\\PaypalBundle": "" }
     },
