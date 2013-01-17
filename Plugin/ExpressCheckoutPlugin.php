@@ -160,7 +160,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         }
 
         // Verify notification
-        return $this->client->checkIPN($paremeters);
+        return $this->client->checkIPN($parameters);
     }
 
     public function processes($paymentSystemName)
