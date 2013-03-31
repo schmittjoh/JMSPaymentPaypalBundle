@@ -34,6 +34,8 @@ class Configuration
                     ->scalarNode('signature')->isRequired()->cannotBeEmpty()->end()
                     ->scalarNode('return_url')->defaultNull()->end()
                     ->scalarNode('cancel_url')->defaultNull()->end()
+                    ->scalarNode('simple_return_url')->defaultNull()->end()
+                    ->scalarNode('simple_cancel_url')->defaultNull()->end()
                     ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
                 ->end()
             ->end()
