@@ -31,13 +31,21 @@ class Client
 
     protected $isDebug;
 
+    protected $forceStandardCheckout;
+
     protected $curlOptions;
 
-    public function __construct(AuthenticationStrategyInterface $authenticationStrategy, $isDebug)
+    /**
+     * @param \JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface $authenticationStrategy
+     * @param boolean $isDebug
+     * @param boolean $forceStandardCheckout
+     */
+    public function __construct(AuthenticationStrategyInterface $authenticationStrategy, $isDebug, $forceStandardCheckout)
     {
         $this->authenticationStrategy = $authenticationStrategy;
-        $this->isDebug = !!$isDebug;
-        $this->curlOptions = array();
+        $this->isDebug                = !!$isDebug;
+        $this->forceStandardCheckout  = !!$forceStandardCheckout;
+        $this->curlOptions            = array();
     }
 
     public function requestAddressVerify($email, $street, $postalCode)
@@ -187,8 +195,9 @@ class Client
         $host = $this->isDebug ? 'www.sandbox.paypal.com' : 'www.paypal.com';
 
         return sprintf(
-            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s',
+            'https://%s/cgi-bin/webscr?cmd=_express-checkout%s&token=%s',
             $host,
+			$this->forceStandardCheckout ? '&useraction=commit' : '',
             $token
         );
     }

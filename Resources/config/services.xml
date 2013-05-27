@@ -38,6 +38,7 @@
         <service id="payment.paypal.client" class="%payment.paypal.client.class%">
             <argument type="service" id="payment.paypal.authentication_strategy" />
             <argument>%payment.paypal.debug%</argument>
+            <argument>%payment.paypal.force_standard_checkout%</argument>
         </service>
         
         <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%">
