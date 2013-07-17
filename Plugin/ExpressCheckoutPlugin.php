@@ -187,13 +187,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
+		$opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
 
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
+            array_merge($opts, array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency()))
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
