@@ -204,8 +204,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
                 
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-
+                $ex = new PaymentPendingException('Payment is still pending: ' . $response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                $ex->setPendingReason($response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                throw $ex;
+                
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
