@@ -171,7 +171,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
                 throw $ex;
 
-            case 'PaymentCompleted':
+            case 'PaymentActionCompleted':
                 break;
 
             case 'PaymentActionNotInitiated':
