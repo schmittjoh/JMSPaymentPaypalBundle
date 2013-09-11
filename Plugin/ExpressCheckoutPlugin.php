@@ -206,7 +206,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 
                 $ex = new PaymentPendingException('Payment is still pending: ' . $response->body->get('PAYMENTINFO_0_PENDINGREASON'));
                 $ex->setPendingReason($response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-                throw $ex;
+                if (PluginInterface::REASON_CODE_AUTHORIZATION != $response->body->get('PAYMENTINFO_0_PENDINGREASON')) {
+                    // Throw every pending exception other authorization
+                    throw $ex;
+                }
+                break;
                 
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
