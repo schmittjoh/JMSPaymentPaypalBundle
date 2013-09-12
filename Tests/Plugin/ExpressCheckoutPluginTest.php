@@ -305,7 +305,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $requestGetExpressCheckoutDetailsResponse = new Response(array(
             'ACK' => 'Success',
-            'CHECKOUTSTATUS' => 'PaymentCompleted'
+            'CHECKOUTSTATUS' => 'PaymentActionCompleted'
         ));
 
         $requestDoExpressCheckoutPaymentResponse = new Response(array(
