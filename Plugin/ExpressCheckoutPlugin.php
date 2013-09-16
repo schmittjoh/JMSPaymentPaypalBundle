@@ -107,10 +107,32 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $completeType = 'NotComplete';
         }
 
-        $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
         ));
-        $this->throwUnlessSuccessResponse($response, $transaction);
+        $this->throwUnlessSuccessResponse($capture, $transaction);
+
+        switch ($capture->body->get('PAYMENTSTATUS')) {
+            // In case authorization is expired after 3 day honor period, try to reauthorize
+            case 'Expired':
+                $reauthorization = $this->client->requestDoReauthorization($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                    'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+                ));
+                $this->throwUnlessSuccessResponse($reauthorization, $transaction);
+
+                // Check reauthorization is completed
+                switch ($reauthorization->body->get('PAYMENTSTATUS')) {
+                    case 'Completed':
+                        // Set new authorization id and capture again
+                        $authorizationId = $reauthorization->body->get('AUTHORIZATIONID');
+                        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+                        ));
+                        $this->throwUnlessSuccessResponse($capture, $transaction);
+                        break;
+                }
+                break;
+        }
 
         $details = $this->client->requestGetTransactionDetails($authorizationId);
         $this->throwUnlessSuccessResponse($details, $transaction);
@@ -120,13 +142,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                throw new PaymentPendingException('Payment is still pending: '.$details->body->get('PENDINGREASON'));
 
             default:
-                $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
+                $ex = new FinancialException('PaymentStatus is not completed: '.$details->body->get('PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
                 $transaction->setResponseCode('Failed');
-                $transaction->setReasonCode($response->body->get('PAYMENTSTATUS'));
+                $transaction->setReasonCode($details->body->get('PAYMENTSTATUS'));
 
                 throw $ex;
         }
