@@ -159,14 +159,47 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
 
+    /**
+     * Reverse approval
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     */
     public function reverseApproval(FinancialTransactionInterface $transaction, $retry)
     {
-        $data = $transaction->getExtendedData();
+        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
 
-        $response = $this->client->requestDoVoid($data->get('authorization_id'));
+        $response = $this->client->requestDoVoid($authorizationId);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReferenceNumber($response->body->get('AUTHORIZATIONID'));
+        $transaction->setProcessedAmount($transaction->getRequestedAmount());
+    }
+
+    /**
+     * Reverse deposit
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException
+     */
+    public function reverseDeposit(FinancialTransactionInterface $transaction, $retry)
+    {
+        $transactionId = $transaction->getPayment()->getDepositTransactions()->getReferenceNumber();
+
+        $response = $this->client->requestRefundTransaction($transactionId);
+        $this->throwUnlessSuccessResponse($response, $transaction);
+
+        switch ($response->body->get(REFUNDSTATUS)) {
+            case 'instant':
+                break;
+            case 'delayed':
+                throw new PaymentPendingException('The refund status is delayed: ' . $response->body->get('PENDINGREASON'));
+        }
+
+        $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
+        $transaction->setProcessedAmount($response->body->get('TOTALREFUNDEDAMT'));
     }
 
     public function processes($paymentSystemName)
