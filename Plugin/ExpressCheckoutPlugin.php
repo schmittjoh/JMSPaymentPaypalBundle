@@ -95,44 +95,17 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
+    /**
+     * Deposit
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException
+     */
     public function deposit(FinancialTransactionInterface $transaction, $retry)
     {
-        $data = $transaction->getExtendedData();
-        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
-
-        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
-            $completeType = 'Complete';
-        }
-        else {
-            $completeType = 'NotComplete';
-        }
-
-        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
-            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        ));
-        $this->throwUnlessSuccessResponse($capture, $transaction);
-
-        switch ($capture->body->get('PAYMENTSTATUS')) {
-            // In case authorization is expired after 3 day honor period, try to reauthorize
-            case 'Expired':
-                $reauthorization = $this->client->requestDoReauthorization($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
-                    'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-                ));
-                $this->throwUnlessSuccessResponse($reauthorization, $transaction);
-
-                // Check reauthorization is completed
-                switch ($reauthorization->body->get('PAYMENTSTATUS')) {
-                    case 'Completed':
-                        // Set new authorization id and capture again
-                        $authorizationId = $reauthorization->body->get('AUTHORIZATIONID');
-                        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
-                            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-                        ));
-                        $this->throwUnlessSuccessResponse($capture, $transaction);
-                        break;
-                }
-                break;
-        }
+        $authorizationId = $this->doCapture($transaction);
 
         $details = $this->client->requestGetTransactionDetails($authorizationId);
         $this->throwUnlessSuccessResponse($details, $transaction);
@@ -191,7 +164,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $response = $this->client->requestRefundTransaction($transactionId);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
-        switch ($response->body->get(REFUNDSTATUS)) {
+        switch ($response->body->get('REFUNDSTATUS')) {
             case 'instant':
                 break;
             case 'delayed':
@@ -323,6 +296,48 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
 
         throw $actionRequest;
+    }
+    
+    /**
+     * Do capture - returns authorization id
+     *
+     * @param $transaction
+     * @return string $authorizationId
+     */
+    protected function doCapture($transaction)
+    {
+        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+
+        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
+            $completeType = 'Complete';
+        }
+        else {
+            $completeType = 'NotComplete';
+        }
+
+        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+        ));
+        $this->throwUnlessSuccessResponse($capture, $transaction);
+
+        // In case authorization is expired after 3 day honor period, try to reauthorize
+        if ('Expired' == $capture->body->get('PAYMENTSTATUS')) {
+            $reauthorization = $this->client->requestDoReauthorization($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+            ));
+            $this->throwUnlessSuccessResponse($reauthorization, $transaction);
+            
+            if ('Completed' == $reauthorization->body->get('PAYMENTSTATUS')) {
+                // Set new authorization id and capture again
+                $authorizationId = $reauthorization->body->get('AUTHORIZATIONID');
+                $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                    'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+                ));
+                $this->throwUnlessSuccessResponse($capture, $transaction);
+            }
+        }
+
+        return $authorizationId;
     }
 
     /**
