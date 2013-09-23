@@ -301,10 +301,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     /**
      * Do capture - returns authorization id
      *
-     * @param $transaction
+     * @param FinancialTransactionInterface $transaction
      * @return string $authorizationId
      */
-    protected function doCapture($transaction)
+    protected function doCapture(FinancialTransactionInterface $transaction)
     {
         $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
 
