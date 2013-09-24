@@ -126,7 +126,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 throw $ex;
         }
 
-        $transaction->setReferenceNumber($authorizationId);
+        $transaction->setReferenceNumber($details->body->get('TRANSACTIONID'));
         $transaction->setProcessedAmount($details->body->get('AMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
