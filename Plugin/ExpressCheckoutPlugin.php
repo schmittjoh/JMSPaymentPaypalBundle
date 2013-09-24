@@ -159,7 +159,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
      */
     public function reverseDeposit(FinancialTransactionInterface $transaction, $retry)
     {
-        $transactionId = $transaction->getPayment()->getDepositTransactions()->getReferenceNumber();
+        $transactionId = $transaction->getPayment()->getDepositTransactions()->first()->getReferenceNumber();
 
         $response = $this->client->requestRefundTransaction($transactionId);
         $this->throwUnlessSuccessResponse($response, $transaction);
