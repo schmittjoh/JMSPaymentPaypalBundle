@@ -105,9 +105,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
      */
     public function deposit(FinancialTransactionInterface $transaction, $retry)
     {
-        $authorizationId = $this->doCapture($transaction);
+        $transactionId = $this->doCapture($transaction);
 
-        $details = $this->client->requestGetTransactionDetails($authorizationId);
+        $details = $this->client->requestGetTransactionDetails($transactionId);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
         switch ($details->body->get('PAYMENTSTATUS')) {
@@ -299,10 +299,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     }
     
     /**
-     * Do capture - returns authorization id
+     * Do capture - returns transaction id
      *
      * @param FinancialTransactionInterface $transaction
-     * @return string $authorizationId
+     * @return string $transactionId
      */
     protected function doCapture(FinancialTransactionInterface $transaction)
     {
@@ -336,8 +336,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 $this->throwUnlessSuccessResponse($capture, $transaction);
             }
         }
-
-        return $authorizationId;
+        
+        // Fetch new transaction id from captured transaction
+        return $capture->body->get('TRANSACTIONID');
     }
 
     /**
