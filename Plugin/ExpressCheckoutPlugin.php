@@ -146,6 +146,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
         $transaction->setReferenceNumber($response->body->get('AUTHORIZATIONID'));
         $transaction->setProcessedAmount($transaction->getRequestedAmount());
     }
@@ -171,8 +172,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 throw new PaymentPendingException('The refund status is delayed: ' . $response->body->get('PENDINGREASON'));
         }
 
+        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
-        $transaction->setProcessedAmount($response->body->get('TOTALREFUNDEDAMT'));
+        $transaction->setProcessedAmount($response->body->get('GROSSREFUNDAMT'));
     }
 
     public function processes($paymentSystemName)
