@@ -211,8 +211,6 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'PaymentActionNotInitiated':
-                break;
-
             default:
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
