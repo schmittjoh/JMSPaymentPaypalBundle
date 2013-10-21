@@ -33,6 +33,11 @@ use JMS\Payment\PaypalBundle\Client\Response;
 class ExpressCheckoutPlugin extends AbstractPlugin
 {
     /**
+     * The payment is pending because it has been authorized but not settled. You must capture the funds first.
+     */
+    const REASON_CODE_PAYPAL_AUTHORIZATION = 'authorization';
+    
+    /**
      * @var string
      */
     protected $returnUrl;
@@ -90,24 +95,19 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
+    /**
+     * Deposit
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException
+     */
     public function deposit(FinancialTransactionInterface $transaction, $retry)
     {
-        $data = $transaction->getExtendedData();
-        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+        $transactionId = $this->doCapture($transaction);
 
-        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
-            $completeType = 'Complete';
-        }
-        else {
-            $completeType = 'NotComplete';
-        }
-
-        $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
-            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        ));
-        $this->throwUnlessSuccessResponse($response, $transaction);
-
-        $details = $this->client->requestGetTransactionDetails($authorizationId);
+        $details = $this->client->requestGetTransactionDetails($transactionId);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
         switch ($details->body->get('PAYMENTSTATUS')) {
@@ -115,31 +115,67 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                throw new PaymentPendingException('Payment is still pending: '.$details->body->get('PENDINGREASON'));
 
             default:
-                $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
+                $ex = new FinancialException('PaymentStatus is not completed: '.$details->body->get('PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
                 $transaction->setResponseCode('Failed');
-                $transaction->setReasonCode($response->body->get('PAYMENTSTATUS'));
+                $transaction->setReasonCode($details->body->get('PAYMENTSTATUS'));
 
                 throw $ex;
         }
 
-        $transaction->setReferenceNumber($authorizationId);
+        $transaction->setReferenceNumber($details->body->get('TRANSACTIONID'));
         $transaction->setProcessedAmount($details->body->get('AMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
 
+    /**
+     * Reverse approval
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     */
     public function reverseApproval(FinancialTransactionInterface $transaction, $retry)
     {
-        $data = $transaction->getExtendedData();
+        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
 
-        $response = $this->client->requestDoVoid($data->get('authorization_id'));
+        $response = $this->client->requestDoVoid($authorizationId);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
+        $transaction->setReferenceNumber($response->body->get('AUTHORIZATIONID'));
+        $transaction->setProcessedAmount($transaction->getRequestedAmount());
+    }
+
+    /**
+     * Reverse deposit
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException
+     */
+    public function reverseDeposit(FinancialTransactionInterface $transaction, $retry)
+    {
+        $transactionId = $transaction->getPayment()->getDepositTransactions()->first()->getReferenceNumber();
+
+        $response = $this->client->requestRefundTransaction($transactionId);
+        $this->throwUnlessSuccessResponse($response, $transaction);
+
+        switch ($response->body->get('REFUNDSTATUS')) {
+            case 'instant':
+                break;
+            case 'delayed':
+                throw new PaymentPendingException('The refund status is delayed: ' . $response->body->get('PENDINGREASON'));
+        }
+
+        $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+        $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
+        $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
+        $transaction->setProcessedAmount($response->body->get('GROSSREFUNDAMT'));
     }
 
     public function processes($paymentSystemName)
@@ -171,12 +207,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
                 throw $ex;
 
-            case 'PaymentCompleted':
+            case 'PaymentActionCompleted':
                 break;
 
             case 'PaymentActionNotInitiated':
-                break;
-
+                if ('verified' == $details->body->get('PAYERSTATUS')) {
+                    // If payment is verified - going on
+                    break;
+                }
+                
             default:
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
@@ -204,8 +243,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
                 
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-
+                $ex = new PaymentPendingException('Payment is still pending: ' . $response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                $ex->setPendingReason($response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                if (self::REASON_CODE_PAYPAL_AUTHORIZATION != $response->body->get('PAYMENTINFO_0_PENDINGREASON')) {
+                    // Throw every pending exception other authorization
+                    throw $ex;
+                }
+                break;
+                
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
@@ -257,6 +302,49 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
 
         throw $actionRequest;
+    }
+    
+    /**
+     * Do capture - returns transaction id
+     *
+     * @param FinancialTransactionInterface $transaction
+     * @return string $transactionId
+     */
+    protected function doCapture(FinancialTransactionInterface $transaction)
+    {
+        $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+
+        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
+            $completeType = 'Complete';
+        }
+        else {
+            $completeType = 'NotComplete';
+        }
+
+        $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+        ));
+        $this->throwUnlessSuccessResponse($capture, $transaction);
+
+        // In case authorization is expired after 3 day honor period, try to reauthorize
+        if ('Expired' == $capture->body->get('PAYMENTSTATUS')) {
+            $reauthorization = $this->client->requestDoReauthorization($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+            ));
+            $this->throwUnlessSuccessResponse($reauthorization, $transaction);
+            
+            if ('Completed' == $reauthorization->body->get('PAYMENTSTATUS')) {
+                // Set new authorization id and capture again
+                $authorizationId = $reauthorization->body->get('AUTHORIZATIONID');
+                $capture = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
+                    'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+                ));
+                $this->throwUnlessSuccessResponse($capture, $transaction);
+            }
+        }
+        
+        // Fetch new transaction id from captured transaction
+        return $capture->body->get('TRANSACTIONID');
     }
 
     /**

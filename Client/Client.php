@@ -75,6 +75,23 @@ class Client
         )));
     }
 
+    /**
+     * Implementation of re-authorization
+     *
+     * @param $authorizationId
+     * @param $amount
+     * @param array $optionalParameters
+     * @return \JMS\Payment\PaypalBundle\Client\Response
+     */
+    public function requestDoReauthorization($authorizationId, $amount, array $optionalParameters = array())
+    {
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
+            'METHOD' => 'DoReauthorization',
+            'AUTHORIZATIONID' => $authorizationId,
+            'AMT' => $this->convertAmountToPaypalFormat($amount),
+        )));
+    }    
+
     public function requestDoCapture($authorizationId, $amount, $completeType, array $optionalParameters = array())
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
