@@ -211,6 +211,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'PaymentActionNotInitiated':
+                if ('verified' == $details->body->get('PAYERSTATUS')) {
+                    // If payment is verified - going on
+                    break;
+                }
+                
             default:
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
