@@ -178,11 +178,12 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             default:
-                $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
-                $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
+                $this->throwActionRequiredForVisitUrlAction($transaction, $token);
+        }
 
-                throw $actionRequest;
+        //NO Payer ID : User may have visit paypal site but doesn't click on continue
+        if (null === $details->body->get('PAYERID')) {
+            $this->throwActionRequiredForVisitUrlAction($transaction, $token);
         }
 
         // complete the transaction
@@ -255,6 +256,19 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $actionRequest = new ActionRequiredException('User must authorize the transaction.');
         $actionRequest->setFinancialTransaction($transaction);
         $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
+
+        throw $actionRequest;
+    }
+    
+    /**
+     * @param FinancialTransactionInterface $transaction
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException
+     */
+    protected function throwActionRequiredForVisitUrlAction(FinancialTransactionInterface $transaction, $token)
+    {
+        $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
+        $actionRequest->setFinancialTransaction($transaction);
+        $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
 
         throw $actionRequest;
     }
