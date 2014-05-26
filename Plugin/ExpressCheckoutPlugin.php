@@ -33,6 +33,11 @@ use JMS\Payment\PaypalBundle\Client\Response;
 class ExpressCheckoutPlugin extends AbstractPlugin
 {
     /**
+     * The payment is pending because it has been authorized but not settled. You must capture the funds first.
+     */
+    const REASON_CODE_PAYPAL_AUTHORIZATION = 'authorization';
+
+    /**
      * @var string
      */
     protected $returnUrl;
@@ -203,8 +208,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+
+                $ex = new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                $ex->addProperty('PENDINGREASON', $response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                if (self::REASON_CODE_PAYPAL_AUTHORIZATION != $response->body->get('PAYMENTINFO_0_PENDINGREASON')) {
+                    // Throw every pending exception other authorization
+                    throw $ex;
+                }
 
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
