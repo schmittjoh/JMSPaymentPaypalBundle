@@ -43,6 +43,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $cancelUrl;
 
     /**
+     * @var string
+     */
+    protected $notifyUrl;
+
+    /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
     protected $client;
@@ -51,12 +56,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin
      * @param string $returnUrl
      * @param string $cancelUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
+     * @param string $notifyUrl
      */
-    public function __construct($returnUrl, $cancelUrl, Client $client)
+    public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
+        $this->notifyUrl = $notifyUrl;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -188,12 +195,20 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
+        $optionalParameters = array(
+            'PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
+        );
+
+        if (null !== $notifyUrl = $this->getNotifyUrl($data)) {
+            $optionalParameters['PAYMENTREQUEST_0_NOTIFYURL'] = $notifyUrl;
+        }
+
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            array('PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency())
+            $optionalParameters
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
@@ -302,5 +317,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         }
 
         throw new \RuntimeException('You must configure a cancel url.');
+    }
+
+    protected function getNotifyUrl(ExtendedDataInterface $data)
+    {
+        if ($data->has('notify_url')) {
+            return $data->get('notify_url');
+        }
+        else if (0 !== strlen($this->notifyUrl)) {
+            return $this->notifyUrl;
+        }
     }
 }
