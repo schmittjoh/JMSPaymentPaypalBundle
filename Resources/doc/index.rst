@@ -6,6 +6,18 @@ Dependencies
 This plugin depends on the JMSPaymentCoreBundle_, so you'll need to add this to your kernel
 as well even if you don't want to use its persistence capabilities.
 
+Installation using Composer (recommended for Symfony 2.1)
+------------
+*  Add the following lines into your symfony 2.1 projects' <code>composer.json</code> file
+<code>
+jms/payment-paypal-bundle": "dev-master",
+</code>
+* Add the following line into your app/AppKernel.php
+<code>
+new JMS\Payment\PaypalBundle\JMSPaymentPaypalBundle(),
+</code>
+
+
 Configuration
 -------------
 ::
