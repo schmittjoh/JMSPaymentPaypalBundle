@@ -93,7 +93,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
-        $transaction->setProcessedAmount($response->body->get('NETREFUNDAMT'));
+        $transaction->setProcessedAmount($response->body->get('TOTALREFUNDEDAMOUNT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
