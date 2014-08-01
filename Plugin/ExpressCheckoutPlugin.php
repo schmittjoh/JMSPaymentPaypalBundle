@@ -89,7 +89,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         }
 
         $response = $this->client->requestRefundTransaction($data->get('authorization_id'), $parameters);
-
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
@@ -112,6 +112,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
         ));
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $details = $this->client->requestGetTransactionDetails($authorizationId);
@@ -166,6 +167,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $token = $this->obtainExpressCheckoutToken($transaction, $paymentAction);
 
         $details = $this->client->requestGetExpressCheckoutDetails($token);
+        $this->saveResponseDetails($data, $details);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
         // verify checkout status
@@ -210,6 +212,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $details->body->get('PAYERID'),
             $optionalParameters
         );
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
@@ -261,6 +264,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $this->getCancelUrl($data),
             $opts
         );
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $data->set('express_checkout_token', $response->body->get('TOKEN'));
@@ -326,6 +330,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         }
         else if (0 !== strlen($this->notifyUrl)) {
             return $this->notifyUrl;
+        }
+    }
+
+    private function saveResponseDetails(ExtendedDataInterface $data, Response $details)
+    {
+        foreach ($details->body->all() as $key => $value) {
+            $data->set($key, $value);
         }
     }
 }
