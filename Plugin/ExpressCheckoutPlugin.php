@@ -230,6 +230,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 $transaction->setResponseCode('Failed');
                 $transaction->setReasonCode($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
 
+                //Set attention required on payment or credit
+                if (null !== $transaction->getPayment()) {
+                    $transaction->getPayment()->setAttentionRequired(true);
+                } elseif (null !== $transaction->getCredit()) {
+                    $transaction->getCredit()->setAttentionRequired(true);
+                }
+
                 throw $ex;
         }
 
