@@ -240,6 +240,7 @@ class Client
         curl_setopt($curl, CURLOPT_URL, $request->getUri());
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HEADER, true);
+        curl_setopt($curl, CURLOPT_SSL_CIPHER_LIST, 'TLSv1');
 
         // add headers
         $headers = array();
