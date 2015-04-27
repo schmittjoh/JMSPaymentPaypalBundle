@@ -123,7 +123,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                break;
+                //Nothing caches this exception and it was breaking the checkout process leaving the payments
+                //in approving state, when the Approve method was used to process the payment order.      
+                //throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
 
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
