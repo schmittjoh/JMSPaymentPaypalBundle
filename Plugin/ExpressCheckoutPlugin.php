@@ -123,11 +123,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
+                 //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                if ($response->body->get('PENDINGREASON')!='authorization') {
+                    throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                }
                 break;
-                //Nothing caches this exception and it was breaking the checkout process leaving the payments
-                //in approving state, when the Approve method was used to process the payment order.      
-                //throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
-
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
@@ -223,10 +223,12 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
-                $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-
+                //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                if ($response->body->get('PAYMENTINFO_0_PENDINGREASON')!='authorization') {
+                    $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
+                    throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
+                }
+                break;
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
