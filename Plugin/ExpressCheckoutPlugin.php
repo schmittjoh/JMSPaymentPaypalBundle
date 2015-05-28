@@ -150,6 +150,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $response = $this->client->requestDoVoid($data->get('authorization_id'));
         $this->throwUnlessSuccessResponse($response, $transaction);
 
+        $transaction->setProcessedAmount($transaction->getRequestedAmount());
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
