@@ -88,7 +88,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $parameters['CURRENCYCODE'] = $transaction->getCredit()->getPaymentInstruction()->getCurrency();
         }
 
-        $response = $this->client->requestRefundTransaction($data->get('authorization_id'), $parameters);
+        //pull the appropriate transaction id for the refund request depending on how the capture was originally made
+        if ($approveTransaction->getTransactionType() === FinancialTransactionInterface::TRANSACTION_TYPE_APPROVE_AND_DEPOSIT) {
+            $transactionId = $approveTransaction->getReferenceNumber();
+        } else {
+            $depositTransaction = $transaction->getCredit()->getPayment()->getDepositTransactions()->first();
+            $transactionId = $depositTransaction->getReferenceNumber();
+        }
+
+        $response = $this->client->requestRefundTransaction($transactionId, $parameters);
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
@@ -112,11 +120,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
         ));
+        //set reference to that of the deposit transaction ID, this can then be used for credit's later
+        $transaction->setReferenceNumber($response->body->get('TRANSACTIONID'));
+
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $details = $this->client->requestGetTransactionDetails($authorizationId);
         $this->throwUnlessSuccessResponse($details, $transaction);
+
 
         switch ($details->body->get('PAYMENTSTATUS')) {
             case 'Completed':
@@ -137,7 +149,6 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 throw $ex;
         }
 
-        $transaction->setReferenceNumber($authorizationId);
         $transaction->setProcessedAmount($details->body->get('AMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
