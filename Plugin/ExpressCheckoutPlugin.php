@@ -109,13 +109,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         $data = $transaction->getExtendedData();
         $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
-
-        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
-            $completeType = 'Complete';
-        }
-        else {
-            $completeType = 'NotComplete';
-        }
+        
+        //always 'Complete' as we are only capturing once, thus we always indicate that the authorisation is closed
+        $completeType = 'Complete';
 
         $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
@@ -125,6 +121,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
+
+        $captureAmt = ($response->body->get('AMT'));
 
         $details = $this->client->requestGetTransactionDetails($authorizationId);
         $this->throwUnlessSuccessResponse($details, $transaction);
@@ -149,7 +147,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 throw $ex;
         }
 
-        $transaction->setProcessedAmount($details->body->get('AMT'));
+        $transaction->setProcessedAmount($captureAmt);
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
