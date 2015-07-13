@@ -53,6 +53,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $client;
 
     /**
+     * A function that, when given a FinancialTransactionInterface object, provides a credentials key to use.
+     *
+     * @var callable
+     */
+    private $credentialsKeyResolver;
+
+    /**
      * @param string $returnUrl
      * @param string $cancelUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
@@ -64,6 +71,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
         $this->notifyUrl = $notifyUrl;
+        $this->credentialsKeyResolver = function () {
+            return null;
+        };
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -96,7 +106,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $transactionId = $depositTransaction->getReferenceNumber();
         }
 
-        $response = $this->client->requestRefundTransaction($transactionId, $parameters);
+        $response = $this->client->requestRefundTransaction($transactionId, $parameters, $this->getCredentialsKeyForTransaction($transaction));
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
@@ -113,9 +123,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         //always 'Complete' as we are only capturing once, thus we always indicate that the authorisation is closed
         $completeType = 'Complete';
 
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+
         $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        ));
+        ), $credentialsKey);
         //set reference to that of the deposit transaction ID, this can then be used for credit's later
         $transaction->setReferenceNumber($response->body->get('TRANSACTIONID'));
 
@@ -124,7 +136,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         $captureAmt = ($response->body->get('AMT'));
 
-        $details = $this->client->requestGetTransactionDetails($authorizationId);
+        $details = $this->client->requestGetTransactionDetails($authorizationId, $credentialsKey);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
 
@@ -156,7 +168,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         $data = $transaction->getExtendedData();
 
-        $response = $this->client->requestDoVoid($data->get('authorization_id'));
+        $response = $this->client->requestDoVoid($data->get('authorization_id'), $this->getCredentialsKeyForTransaction($transaction));
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setProcessedAmount($transaction->getRequestedAmount());
@@ -173,13 +185,20 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         return false;
     }
 
+    public function setCredentialsKeyResolver(callable $resolver)
+    {
+        $this->credentialsKeyResolver = $resolver;
+    }
+
     protected function createCheckoutBillingAgreement(FinancialTransactionInterface $transaction, $paymentAction)
     {
         $data = $transaction->getExtendedData();
 
         $token = $this->obtainExpressCheckoutToken($transaction, $paymentAction);
 
-        $details = $this->client->requestGetExpressCheckoutDetails($token);
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+
+        $details = $this->client->requestGetExpressCheckoutDetails($token, $credentialsKey);
         $this->saveResponseDetails($data, $details);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
@@ -223,7 +242,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            $optionalParameters
+            $optionalParameters,
+            $credentialsKey
         );
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
@@ -280,11 +300,14 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
 
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+
         $response = $this->client->requestSetExpressCheckout(
             $transaction->getRequestedAmount(),
             $this->getReturnUrl($data),
             $this->getCancelUrl($data),
-            $opts
+            $opts,
+            $credentialsKey
         );
         $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
@@ -360,5 +383,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         foreach ($details->body->all() as $key => $value) {
             $data->set($key, $value);
         }
+    }
+
+    private function getCredentialsKeyForTransaction(FinancialTransactionInterface $transaction)
+    {
+        return call_user_func($this->credentialsKeyResolver, $transaction);
     }
 }
