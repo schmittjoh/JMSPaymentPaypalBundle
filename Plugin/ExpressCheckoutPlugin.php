@@ -168,7 +168,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         $data = $transaction->getExtendedData();
 
-        $response = $this->client->requestDoVoid($data->get('authorization_id'), $this->getCredentialsKeyForTransaction($transaction));
+        $response = $this->client->requestDoVoid($data->get('authorization_id'), [], $this->getCredentialsKeyForTransaction($transaction));
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setProcessedAmount($transaction->getRequestedAmount());
