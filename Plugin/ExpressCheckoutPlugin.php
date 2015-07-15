@@ -202,7 +202,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         if (null !== $notifyUrl = $this->getNotifyUrl($data)) {
             $optionalParameters['PAYMENTREQUEST_0_NOTIFYURL'] = $notifyUrl;
         }
-
+        
+        if ($data->has('checkout_params')) {
+            $optionalParameters = array_merge($optionalParameters, $data->get('checkout_params'));
+        }
+        
         $response = $this->client->requestDoExpressCheckoutPayment(
             $data->get('express_checkout_token'),
             $transaction->getRequestedAmount(),
@@ -299,7 +303,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
-        }
+        }c
         else if (0 !== strlen($this->returnUrl)) {
             return $this->returnUrl;
         }
