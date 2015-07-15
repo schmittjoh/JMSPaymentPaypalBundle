@@ -303,7 +303,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
-        }c
+        }
         else if (0 !== strlen($this->returnUrl)) {
             return $this->returnUrl;
         }
