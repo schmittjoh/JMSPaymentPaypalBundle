@@ -2,6 +2,7 @@
 
 namespace JMS\Payment\PaypalBundle\Plugin;
 
+use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
 use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
 use JMS\Payment\CoreBundle\Plugin\PluginInterface;
@@ -78,12 +79,41 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
     {
+        if($retry === true) {
+            $this->updateIpnTransaction($transaction);
+        }
+
         $this->createCheckoutBillingAgreement($transaction, 'Authorization');
     }
 
     public function approveAndDeposit(FinancialTransactionInterface $transaction, $retry)
     {
+        if($retry === true) {
+            $this->updateIpnTransaction($transaction);
+        }
+
         $this->createCheckoutBillingAgreement($transaction, 'Sale');
+    }
+
+    public function updateIpnTransaction(FinancialTransactionInterface $transaction)
+    {
+        $data = $transaction->getExtendedData();
+        $decision = $data->get('ipn_decision');
+
+        if($decision === 'Completed') {
+            $transaction->setProcessedAmount($transaction->getRequestedAmount());
+            $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+            $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
+
+            return;
+        } else {
+            $ex = new FinancialException('PaymentStatus is not completed: Denied');
+            $ex->setFinancialTransaction($transaction);
+            $transaction->setResponseCode($decision);
+            $transaction->setReasonCode($decision);
+
+            throw $ex;
+        }
     }
 
     public function credit(FinancialTransactionInterface $transaction, $retry)
