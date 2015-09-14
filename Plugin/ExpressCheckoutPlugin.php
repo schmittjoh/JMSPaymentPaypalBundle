@@ -80,7 +80,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     public function approve(FinancialTransactionInterface $transaction, $retry)
     {
         if($transaction->getExtendedData()->has('ipn_decision')) {
-            return $this->updateIpnTransaction($transaction);
+            $this->updateIpnTransaction($transaction);
+            return;
         }
 
         $this->createCheckoutBillingAgreement($transaction, 'Authorization');
@@ -89,7 +90,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     public function approveAndDeposit(FinancialTransactionInterface $transaction, $retry)
     {
         if($transaction->getExtendedData()->has('ipn_decision')) {
-            return $this->updateIpnTransaction($transaction);
+            $this->updateIpnTransaction($transaction);
+            return;
         }
 
         $this->createCheckoutBillingAgreement($transaction, 'Sale');
