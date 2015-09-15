@@ -81,6 +81,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if($transaction->getExtendedData()->has('ipn_decision')) {
             $this->updateIpnTransaction($transaction);
+            return;
         }
 
         $this->createCheckoutBillingAgreement($transaction, 'Authorization');
@@ -90,6 +91,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if($transaction->getExtendedData()->has('ipn_decision')) {
             $this->updateIpnTransaction($transaction);
+            return;
         }
 
         $this->createCheckoutBillingAgreement($transaction, 'Sale');
