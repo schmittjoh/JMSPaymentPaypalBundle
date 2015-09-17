@@ -147,7 +147,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
-    public function doReApprove(FinancialTransactionInterface $transaction)
+    public function reApprove(FinancialTransactionInterface $transaction)
     {
         $originalAuthorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
         $response = $this->client->requestDoReauthorization($originalAuthorizationId, $transaction->getRequestedAmount(), [
