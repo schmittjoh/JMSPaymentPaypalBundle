@@ -76,6 +76,15 @@ class Client
         )), $key);
     }
 
+    public function requestDoReAuthorization($authorizationId, $amount, array $optionalParameters = array(), $key = null)
+    {
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
+            'METHOD' => 'DoReAuthorization',
+            'AUTHORIZATIONID' => $authorizationId,
+            'AMT' => $this->convertAmountToPaypalFormat($amount),
+        )), $key);
+    }
+
     public function requestDoCapture($authorizationId, $amount, $completeType, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(

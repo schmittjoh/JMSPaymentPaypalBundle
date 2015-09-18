@@ -33,7 +33,9 @@ use JMS\Payment\PaypalBundle\Client\Response;
 
 class ExpressCheckoutPlugin extends AbstractPlugin
 {
-    /**
+
+    const ERROR_CODE_HONOR_WINDOW = 10617; 
+    /** 
      * @var string
      */
     protected $returnUrl;
@@ -145,6 +147,52 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
         $transaction->setProcessedAmount($response->body->get('GROSSREFUNDAMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+    }
+
+    public function reApprove(FinancialTransactionInterface $transaction)
+    {
+        $originalAuthorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+        $response = $this->client->requestDoReauthorization($originalAuthorizationId, $transaction->getRequestedAmount(), [
+            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency()
+        ]);
+
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+
+        if ($response->body->get('ACK') == 'Success') {
+            //GEt the new AuthorizationId and update the transaction
+            $extendedData = $transaction->getExtendedData();
+            //save the original_authorization_id for reference.
+            $extendedData->set('original_authorization_id', $originalAuthorizationId);
+            $newAuthorizationId = $response->body->get('AUTHORIZATIONID');
+            $transaction->setReferenceNumber($newAuthorizationId);
+            $transaction->setExtendedData($extendedData);
+            $details = $this->client->requestGetTransactionDetails($newAuthorizationId, $credentialsKey);
+            $this->throwUnlessSuccessResponse($details, $transaction);
+
+            switch ($details->body->get('PAYMENTSTATUS')) {
+                case 'Completed':
+                    break;
+
+                case 'Pending':
+                    //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                    if ($response->body->get('PENDINGREASON') != 'authorization') {
+                        throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                    }
+                    break;
+                default:
+                    $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
+                    $ex->setFinancialTransaction($transaction);
+                    $transaction->setResponseCode('Failed');
+                    $transaction->setReasonCode($response->body->get('PAYMENTSTATUS'));
+
+                    throw $ex;
+            }
+        } elseif ($response->body->get('L_ERRORCODE0') == self::ERROR_CODE_HONOR_WINDOW) {
+            // if the re-authorization is not allowed inside the honor period, then do nothing and use the original authorization ID
+            return;
+        } else {
+            $this->throwUnlessSuccessResponse($response, $transaction);
+        }
     }
 
     public function deposit(FinancialTransactionInterface $transaction, $retry)
