@@ -251,6 +251,7 @@ class Client
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1); // Latest TLS(1.x)
         curl_setopt_array($curl, $this->curlOptions);
         curl_setopt($curl, CURLOPT_URL, $request->getUri());
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
