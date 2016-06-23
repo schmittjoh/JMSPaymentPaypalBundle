@@ -1,5 +1,5 @@
 {
-    "name": "jms/payment-paypal-bundle",
+    "name": "ticketswap/payment-paypal-bundle",
     "type": "symfony-bundle",
     "description": "Payment Bundle providing access to the PayPal API",
     "keywords": ["payment", "paypal"],
