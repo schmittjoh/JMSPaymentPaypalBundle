@@ -41,6 +41,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
      */
     public function createAuthenticationStrategyMock()
     {
-        return $this->getMock('JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface');
+        return $this->createMock('JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface');
     }
 }

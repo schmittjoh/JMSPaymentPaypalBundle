@@ -214,6 +214,11 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
             ->with($this->equalTo($expectedToken))
             ->will($this->returnValue($detailResponse))
         ;
+        $clientMock
+            ->expects($this->once())
+            ->method('getAuthenticateExpressCheckoutTokenUrl')
+            ->with($expectedToken)
+            ->willReturn('https://www.sandbox.paypal.com');
 
         $plugin = new ExpressCheckoutPlugin('return_url', 'cancel_url', $clientMock);
 
@@ -234,7 +239,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
+     * @expectedException \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
      * @expectedExceptionMessage PaymentAction failed
      */
     public function testThrowPaymentFailedIfDetailsContainCorrespondingCheckoutStatusWhileApproving()
@@ -267,7 +272,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
+     * @expectedException \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
      * @expectedExceptionMessage PayPal-Response was not successful
      */
     public function testThrowFinancialExceptionOnRequestingPaymentDetailsWhileApproving()
@@ -315,7 +320,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array(
-            'requestGetExpressCheckoutDetails', 
+            'requestGetExpressCheckoutDetails',
             'requestSetExpressCheckout',
             'requestDoExpressCheckoutPayment'
         ));
@@ -372,6 +377,6 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
      */
     protected function createClientMock($mockedMethods = array())
     {
-        return $this->getMock('JMS\Payment\PaypalBundle\Client\Client', $mockedMethods, array(), '', false);
+        return $this->createMock('JMS\Payment\PaypalBundle\Client\Client', $mockedMethods, array(), '', false);
     }
 }

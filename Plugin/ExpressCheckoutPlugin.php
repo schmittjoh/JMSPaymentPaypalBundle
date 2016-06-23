@@ -185,9 +185,12 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             default:
+                $tokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl($token);
+                $visitUrl = new VisitUrl($tokenUrl);
+
                 $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
                 $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
+                $actionRequest->setAction($visitUrl);
 
                 throw $actionRequest;
         }
@@ -218,7 +221,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
+
                 throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
 
             default:
