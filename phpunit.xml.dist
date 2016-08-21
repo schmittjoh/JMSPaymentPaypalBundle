@@ -13,4 +13,8 @@
         <server name="API_PASSWORD" value="1283340321" />
         <server name="API_SIGNATURE" value="A93vj6VJ.ZIRNjbI6GFgi4N2Km.5ATLs-EinlyWk2htEGX0xc3L8YIBo" />
     </php>
+
+    <php>
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak" />
+    </php>
 </phpunit>
