@@ -245,7 +245,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->throwUnlessSuccessResponse($details, $transaction);
 
 
-        switch ($details->body->get('PAYMENTSTATUS')) {
+        switch ($response->body->get('PAYMENTSTATUS')) {
             case 'Completed':
                 break;
 
