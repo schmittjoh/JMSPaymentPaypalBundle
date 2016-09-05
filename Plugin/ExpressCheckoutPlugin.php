@@ -32,6 +32,10 @@ use JMS\Payment\PaypalBundle\Client\Response;
 
 class ExpressCheckoutPlugin extends AbstractPlugin
 {
+
+    const ERROR_CODE_HONOR_WINDOW = 10617; 
+    const ERROR_CODE_FUNDING_FAILURE = 10486;
+
     /**
      * @var string
      */
@@ -53,10 +57,22 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $client;
 
     /**
-     * @param string $returnUrl
-     * @param string $cancelUrl
-     * @param \JMS\Payment\PaypalBundle\Client\Client $client
-     * @param string $notifyUrl
+     * A function that, when given a FinancialTransactionInterface object, provides a credentials key to use.
+     *
+     * @var callable
+     */
+    private $credentialsKeyResolver;
+
+    /**
+     * @var boolean
+     */
+    private $redirectDueToFundingError;
+
+    /**
+     * @param bool $returnUrl
+     * @param $cancelUrl
+     * @param Client $client
+     * @param null $notifyUrl
      */
     public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null)
     {
@@ -64,16 +80,69 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
         $this->notifyUrl = $notifyUrl;
+        $this->credentialsKeyResolver = function () {
+            return null;
+        };
+        $this->redirectDueToFundingError = false;
     }
 
+    /**
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws ActionRequiredException
+     * @throws FinancialException
+     * @throws PaymentPendingException
+     */
     public function approve(FinancialTransactionInterface $transaction, $retry)
     {
+        if ($transaction->getExtendedData()->has('ipn_decision')) {
+            $this->updateIpnTransaction($transaction);
+            return;
+        }
+
         $this->createCheckoutBillingAgreement($transaction, 'Authorization');
     }
 
+    /**
+     * @param FinancialTransactionInterface $transaction
+     * @param bool $retry
+     * @throws ActionRequiredException
+     * @throws FinancialException
+     * @throws PaymentPendingException
+     */
     public function approveAndDeposit(FinancialTransactionInterface $transaction, $retry)
     {
+        if ($transaction->getExtendedData()->has('ipn_decision')) {
+            $this->updateIpnTransaction($transaction);
+            return;
+        }
+
         $this->createCheckoutBillingAgreement($transaction, 'Sale');
+    }
+
+    /**
+     * @param FinancialTransactionInterface $transaction
+     * @throws FinancialException
+     */
+    public function updateIpnTransaction(FinancialTransactionInterface $transaction)
+    {
+        $data = $transaction->getExtendedData();
+        $decision = $data->get('ipn_decision');
+
+        if ($decision === 'Completed') {
+            $transaction->setProcessedAmount($transaction->getRequestedAmount());
+            $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+            $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
+
+            return;
+        } else {
+            $ex = new FinancialException('PaymentStatus is not completed: Denied');
+            $ex->setFinancialTransaction($transaction);
+            $transaction->setResponseCode($decision);
+            $transaction->setReasonCode($decision);
+
+            throw $ex;
+        }
     }
 
     public function credit(FinancialTransactionInterface $transaction, $retry)
@@ -81,49 +150,111 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $data = $transaction->getExtendedData();
         $approveTransaction = $transaction->getCredit()->getPayment()->getApproveTransaction();
 
-        $parameters = array();
+        $parameters = [];
         if (Number::compare($transaction->getRequestedAmount(), $approveTransaction->getProcessedAmount()) !== 0) {
             $parameters['REFUNDTYPE'] = 'Partial';
             $parameters['AMT'] = $this->client->convertAmountToPaypalFormat($transaction->getRequestedAmount());
             $parameters['CURRENCYCODE'] = $transaction->getCredit()->getPaymentInstruction()->getCurrency();
         }
 
-        $response = $this->client->requestRefundTransaction($data->get('authorization_id'), $parameters);
+        //pull the appropriate transaction id for the refund request depending on how the capture was originally made
+        if ($approveTransaction->getTransactionType() === FinancialTransactionInterface::TRANSACTION_TYPE_APPROVE_AND_DEPOSIT) {
+            $transactionId = $approveTransaction->getReferenceNumber();
+        } else {
+            $depositTransaction = $transaction->getCredit()->getPayment()->getDepositTransactions()->first();
+            $transactionId = $depositTransaction->getReferenceNumber();
+        }
 
+        $response = $this->client->requestRefundTransaction($transactionId, $parameters, $this->getCredentialsKeyForTransaction($transaction));
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $transaction->setReferenceNumber($response->body->get('REFUNDTRANSACTIONID'));
-        $transaction->setProcessedAmount($response->body->get('NETREFUNDAMT'));
+        $transaction->setProcessedAmount($response->body->get('GROSSREFUNDAMT'));
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+    }
+
+    public function reApprove(FinancialTransactionInterface $transaction)
+    {
+        $originalAuthorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+        $response = $this->client->requestDoReauthorization($originalAuthorizationId, $transaction->getRequestedAmount(), [
+            'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency()
+        ]);
+
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+
+        if ($response->body->get('ACK') == 'Success') {
+            //GEt the new AuthorizationId and update the transaction
+            $extendedData = $transaction->getExtendedData();
+            //save the original_authorization_id for reference.
+            $extendedData->set('original_authorization_id', $originalAuthorizationId);
+            $newAuthorizationId = $response->body->get('AUTHORIZATIONID');
+            $transaction->setReferenceNumber($newAuthorizationId);
+            $transaction->setExtendedData($extendedData);
+            $details = $this->client->requestGetTransactionDetails($newAuthorizationId, $credentialsKey);
+            $this->throwUnlessSuccessResponse($details, $transaction);
+
+            switch ($details->body->get('PAYMENTSTATUS')) {
+                case 'Completed':
+                    break;
+
+                case 'Pending':
+                    //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                    if ($response->body->get('PENDINGREASON') != 'authorization') {
+                        throw new PaymentPendingException(sprintf('Payment is still pending: %s', $response->body->get('PENDINGREASON')));
+                    }
+                    break;
+                default:
+                    $ex = new FinancialException(sprintf('PaymentStatus is not completed: %s', $response->body->get('PAYMENTSTATUS')));
+                    $ex->setFinancialTransaction($transaction);
+                    $transaction->setResponseCode('Failed');
+                    $transaction->setReasonCode($response->body->get('PAYMENTSTATUS'));
+
+                    throw $ex;
+            }
+        } elseif ($response->body->get('L_ERRORCODE0') == self::ERROR_CODE_HONOR_WINDOW) {
+            // if the re-authorization is not allowed inside the honor period, then do nothing and use the original authorization ID
+            return;
+        } else {
+            $this->throwUnlessSuccessResponse($response, $transaction);
+        }
     }
 
     public function deposit(FinancialTransactionInterface $transaction, $retry)
     {
         $data = $transaction->getExtendedData();
         $authorizationId = $transaction->getPayment()->getApproveTransaction()->getReferenceNumber();
+        
+        //always 'Complete' as we are only capturing once, thus we always indicate that the authorisation is closed
+        $completeType = 'Complete';
 
-        if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
-            $completeType = 'Complete';
-        }
-        else {
-            $completeType = 'NotComplete';
-        }
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
 
         $response = $this->client->requestDoCapture($authorizationId, $transaction->getRequestedAmount(), $completeType, array(
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        ));
+        ), $credentialsKey);
+        //set reference to that of the deposit transaction ID, this can then be used for credit's later
+        $transaction->setReferenceNumber($response->body->get('TRANSACTIONID'));
+
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
-        $details = $this->client->requestGetTransactionDetails($authorizationId);
+        $captureAmt = ($response->body->get('AMT'));
+
+        $details = $this->client->requestGetTransactionDetails($authorizationId, $credentialsKey);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
-        switch ($details->body->get('PAYMENTSTATUS')) {
+
+        switch ($response->body->get('PAYMENTSTATUS')) {
             case 'Completed':
                 break;
 
             case 'Pending':
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
-
+                 //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                if ($response->body->get('PENDINGREASON')!='authorization') {
+                    throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PENDINGREASON'));
+                }
+                break;
             default:
                 $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTSTATUS'));
                 $ex->setFinancialTransaction($transaction);
@@ -133,8 +264,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 throw $ex;
         }
 
-        $transaction->setReferenceNumber($authorizationId);
-        $transaction->setProcessedAmount($details->body->get('AMT'));
+        $transaction->setProcessedAmount($captureAmt);
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
         $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
     }
@@ -143,9 +273,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         $data = $transaction->getExtendedData();
 
-        $response = $this->client->requestDoVoid($data->get('authorization_id'));
+        $response = $this->client->requestDoVoid($data->get('authorization_id'), [], $this->getCredentialsKeyForTransaction($transaction));
         $this->throwUnlessSuccessResponse($response, $transaction);
 
+        $transaction->setProcessedAmount($transaction->getRequestedAmount());
         $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
     }
 
@@ -159,18 +290,31 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         return false;
     }
 
+    public function setCredentialsKeyResolver(callable $resolver)
+    {
+        $this->credentialsKeyResolver = $resolver;
+    }
+
+    public function setRedirectDueToFundingError($redirect)
+    {
+        $this->redirectDueToFundingError = $redirect;
+    }
+
     protected function createCheckoutBillingAgreement(FinancialTransactionInterface $transaction, $paymentAction)
     {
         $data = $transaction->getExtendedData();
-
         $token = $this->obtainExpressCheckoutToken($transaction, $paymentAction);
-
-        $details = $this->client->requestGetExpressCheckoutDetails($token);
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
+        $details = $this->client->requestGetExpressCheckoutDetails($token, $credentialsKey);
+        $this->saveResponseDetails($data, $details);
         $this->throwUnlessSuccessResponse($details, $transaction);
 
         // verify checkout status
         switch ($details->body->get('CHECKOUTSTATUS')) {
             case 'PaymentActionFailed':
+                if ($this->redirectDueToFundingError && $details->body->get('ACK') == 'Success') {
+                    break;
+                }
                 $ex = new FinancialException('PaymentAction failed.');
                 $transaction->setResponseCode('Failed');
                 $transaction->setReasonCode('PaymentActionFailed');
@@ -195,9 +339,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         // complete the transaction
         $data->set('paypal_payer_id', $details->body->get('PAYERID'));
 
-        $optionalParameters = array(
+        $optionalParameters = [
             'PAYMENTREQUEST_0_CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency(),
-        );
+        ];
 
         if (null !== $notifyUrl = $this->getNotifyUrl($data)) {
             $optionalParameters['PAYMENTREQUEST_0_NOTIFYURL'] = $notifyUrl;
@@ -208,8 +352,12 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             $transaction->getRequestedAmount(),
             $paymentAction,
             $details->body->get('PAYERID'),
-            $optionalParameters
+            $optionalParameters,
+            $credentialsKey
         );
+
+        $this->saveResponseDetails($data, $response);
+        $this->checkFundingErrorResponse($response, $transaction, $token);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
@@ -217,15 +365,24 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             case 'Pending':
-                $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
-                throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
-
+                //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
+                if ($response->body->get('PAYMENTINFO_0_PENDINGREASON') != 'authorization') {
+                    $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
+                    throw new PaymentPendingException(sprintf('Payment is still pending: %s', $response->body->get('PAYMENTINFO_0_PENDINGREASON')));
+                }
+                break;
             default:
-                $ex = new FinancialException('PaymentStatus is not completed: '.$response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
+                $ex = new FinancialException(sprintf('PaymentStatus is not completed: %s', $response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')));
                 $ex->setFinancialTransaction($transaction);
                 $transaction->setResponseCode('Failed');
                 $transaction->setReasonCode($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS'));
+
+                //Set attention required on payment or credit
+                if (null !== $transaction->getPayment()) {
+                    $transaction->getPayment()->setAttentionRequired(true);
+                } elseif (null !== $transaction->getCredit()) {
+                    $transaction->getCredit()->setAttentionRequired(true);
+                }
 
                 throw $ex;
         }
@@ -251,16 +408,20 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             return $data->get('express_checkout_token');
         }
 
-        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : array();
+        $opts = $data->has('checkout_params') ? $data->get('checkout_params') : [];
         $opts['PAYMENTREQUEST_0_PAYMENTACTION'] = $paymentAction;
         $opts['PAYMENTREQUEST_0_CURRENCYCODE'] = $transaction->getPayment()->getPaymentInstruction()->getCurrency();
+
+        $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
 
         $response = $this->client->requestSetExpressCheckout(
             $transaction->getRequestedAmount(),
             $this->getReturnUrl($data),
             $this->getCancelUrl($data),
-            $opts
+            $opts,
+            $credentialsKey
         );
+        $this->saveResponseDetails($data, $response);
         $this->throwUnlessSuccessResponse($response, $transaction);
 
         $data->set('express_checkout_token', $response->body->get('TOKEN'));
@@ -295,6 +456,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         throw $ex;
     }
 
+    /**
+     * @param ExtendedDataInterface $data
+     * @return string
+     */
     protected function getReturnUrl(ExtendedDataInterface $data)
     {
         if ($data->has('return_url')) {
@@ -307,6 +472,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         throw new \RuntimeException('You must configure a return url.');
     }
 
+    /**
+     * @param ExtendedDataInterface $data
+     * @return string
+     */
     protected function getCancelUrl(ExtendedDataInterface $data)
     {
         if ($data->has('cancel_url')) {
@@ -319,6 +488,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         throw new \RuntimeException('You must configure a cancel url.');
     }
 
+    /**
+     * @param ExtendedDataInterface $data
+     * @return null|string
+     */
     protected function getNotifyUrl(ExtendedDataInterface $data)
     {
         if ($data->has('notify_url')) {
@@ -327,5 +500,34 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         else if (0 !== strlen($this->notifyUrl)) {
             return $this->notifyUrl;
         }
+    }
+
+    /**
+     * @param Response $response
+     * @param FinancialTransactionInterface $transaction
+     * @param String $token
+     * @throws ActionRequiredException
+     */
+    protected function checkFundingErrorResponse(Response $response, FinancialTransactionInterface $transaction, $token)
+    {
+        if ($this->redirectDueToFundingError && $response->body->get('L_ERRORCODE0') == self::ERROR_CODE_FUNDING_FAILURE) {
+            $actionRequest = new ActionRequiredException('User has not funding available and need to select a new payment option.');
+            $actionRequest->setFinancialTransaction($transaction);
+            $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
+
+            throw $actionRequest;
+        }
+    }
+
+    private function saveResponseDetails(ExtendedDataInterface $data, Response $details)
+    {
+        foreach ($details->body->all() as $key => $value) {
+            $data->set($key, $value);
+        }
+    }
+
+    private function getCredentialsKeyForTransaction(FinancialTransactionInterface $transaction)
+    {
+        return call_user_func($this->credentialsKeyResolver, $transaction);
     }
 }

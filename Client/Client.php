@@ -1,6 +1,7 @@
 <?php
 namespace JMS\Payment\PaypalBundle\Client;
 
+use JMS\Payment\PaypalBundle\Client\Authentication\KeyedCredentialsAuthenticationStrategyInterface;
 use Symfony\Component\BrowserKit\Response as RawResponse;
 
 use JMS\Payment\CoreBundle\BrowserKit\Request;
@@ -40,60 +41,69 @@ class Client
         $this->curlOptions = array();
     }
 
-    public function requestAddressVerify($email, $street, $postalCode)
+    public function requestAddressVerify($email, $street, $postalCode, $key = null)
     {
         return $this->sendApiRequest(array(
             'METHOD' => 'AddressVerify',
             'EMAIL'  => $email,
             'STREET' => $street,
             'ZIP'    => $postalCode,
-        ));
+        ), $key);
     }
 
-    public function requestBillOutstandingAmount($profileId, array $optionalParameters = array())
+    public function requestBillOutstandingAmount($profileId, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'BillOutstandingAmount',
             'PROFILEID' => $profileId,
-        )));
+        )), $key);
     }
 
-    public function requestCreateRecurringPaymentsProfile($token)
+    public function requestCreateRecurringPaymentsProfile($token, $key = null)
     {
         return $this->sendApiRequest(array(
             'METHOD' => 'CreateRecurringPaymentsProfile',
             'TOKEN' => $token,
-        ));
+        ), $key);
     }
 
-    public function requestDoAuthorization($transactionId, $amount, array $optionalParameters = array())
+    public function requestDoAuthorization($transactionId, $amount, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoAuthorization',
             'TRANSACTIONID' => $transactionId,
             'AMT' => $this->convertAmountToPaypalFormat($amount),
-        )));
+        )), $key);
     }
 
-    public function requestDoCapture($authorizationId, $amount, $completeType, array $optionalParameters = array())
+    public function requestDoReAuthorization($authorizationId, $amount, array $optionalParameters = array(), $key = null)
+    {
+        return $this->sendApiRequest(array_merge($optionalParameters, array(
+            'METHOD' => 'DoReAuthorization',
+            'AUTHORIZATIONID' => $authorizationId,
+            'AMT' => $this->convertAmountToPaypalFormat($amount),
+        )), $key);
+    }
+
+    public function requestDoCapture($authorizationId, $amount, $completeType, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoCapture',
             'AUTHORIZATIONID' => $authorizationId,
             'AMT' => $this->convertAmountToPaypalFormat($amount),
             'COMPLETETYPE' => $completeType,
-        )));
+        )), $key);
     }
 
-    public function requestDoDirectPayment($ipAddress, array $optionalParameters = array())
+    public function requestDoDirectPayment($ipAddress, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoDirectPayment',
             'IPADDRESS' => $ipAddress,
-        )));
+        )), $key);
     }
 
-    public function requestDoExpressCheckoutPayment($token, $amount, $paymentAction, $payerId, array $optionalParameters = array())
+    public function requestDoExpressCheckoutPayment($token, $amount, $paymentAction, $payerId, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoExpressCheckoutPayment',
@@ -101,15 +111,15 @@ class Client
             'PAYMENTREQUEST_0_AMT' => $this->convertAmountToPaypalFormat($amount),
             'PAYMENTREQUEST_0_PAYMENTACTION' => $paymentAction,
             'PAYERID' => $payerId,
-        )));
+        )), $key);
     }
 
-    public function requestDoVoid($authorizationId, array $optionalParameters = array())
+    public function requestDoVoid($authorizationId, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'DoVoid',
             'AUTHORIZATIONID' => $authorizationId,
-        )));
+        )), $key);
     }
 
     /**
@@ -122,43 +132,44 @@ class Client
      * @param string $returnUrl
      * @param string $cancelUrl
      * @param array $optionalParameters
+     * @param string $key
      * @return Response
      */
-    public function requestSetExpressCheckout($amount, $returnUrl, $cancelUrl, array $optionalParameters = array())
+    public function requestSetExpressCheckout($amount, $returnUrl, $cancelUrl, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'SetExpressCheckout',
             'PAYMENTREQUEST_0_AMT' => $this->convertAmountToPaypalFormat($amount),
             'RETURNURL' => $returnUrl,
             'CANCELURL' => $cancelUrl,
-        )));
+        )), $key);
     }
 
-    public function requestGetExpressCheckoutDetails($token)
+    public function requestGetExpressCheckoutDetails($token, $key = null)
     {
         return $this->sendApiRequest(array(
             'METHOD' => 'GetExpressCheckoutDetails',
             'TOKEN'  => $token,
-        ));
+        ), $key);
     }
 
-    public function requestGetTransactionDetails($transactionId)
+    public function requestGetTransactionDetails($transactionId, $key = null)
     {
         return $this->sendApiRequest(array(
             'METHOD' => 'GetTransactionDetails',
             'TRANSACTIONID' => $transactionId,
-        ));
+        ), $key);
     }
 
-    public function requestRefundTransaction($transactionId, array $optionalParameters = array())
+    public function requestRefundTransaction($transactionId, array $optionalParameters = array(), $key = null)
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'RefundTransaction',
             'TRANSACTIONID' => $transactionId
-        )));
+        )), $key);
     }
 
-    public function sendApiRequest(array $parameters)
+    public function sendApiRequest(array $parameters, $key = null)
     {
         // include some default parameters
         $parameters['VERSION'] = self::API_VERSION;
@@ -169,7 +180,11 @@ class Client
             'POST',
             $parameters
         );
-        $this->authenticationStrategy->authenticate($request);
+        if (null !== $key && $this->authenticationStrategy instanceof KeyedCredentialsAuthenticationStrategyInterface) {
+            $this->authenticationStrategy->authenticateWithKeyedCredentials($request, $key);
+        } else {
+            $this->authenticationStrategy->authenticate($request);
+        }
 
         $response = $this->request($request);
         if (200 !== $response->getStatus()) {
@@ -236,6 +251,7 @@ class Client
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1); // Latest TLS(1.x)
         curl_setopt_array($curl, $this->curlOptions);
         curl_setopt($curl, CURLOPT_URL, $request->getUri());
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);

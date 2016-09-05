@@ -36,6 +36,7 @@ class Configuration
                     ->scalarNode('cancel_url')->defaultNull()->end()
                     ->scalarNode('notify_url')->defaultNull()->end()
                     ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
+                    ->booleanNode('recover_from_funding_failure')->defaultFalse()->end()
                 ->end()
             ->end()
             ->buildTree();
