@@ -1,6 +1,6 @@
 <?php
 
-namespace JMS\Payment\PaypalBundle\Tests\Paypal;
+namespace JMS\Payment\PaypalBundle\Tests\Client;
 
 use JMS\Payment\PaypalBundle\Client\Client;
 
@@ -41,6 +41,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
      */
     public function createAuthenticationStrategyMock()
     {
-        return $this->getMock('JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface');
+        return $this->getMockBuilder('JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface')->getMock();
     }
 }

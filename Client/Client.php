@@ -1,11 +1,11 @@
 <?php
-namespace JMS\Payment\PaypalBundle\Client;
 
-use Symfony\Component\BrowserKit\Response as RawResponse;
+namespace JMS\Payment\PaypalBundle\Client;
 
 use JMS\Payment\CoreBundle\BrowserKit\Request;
 use JMS\Payment\CoreBundle\Plugin\Exception\CommunicationException;
 use JMS\Payment\PaypalBundle\Client\Authentication\AuthenticationStrategyInterface;
+use Symfony\Component\BrowserKit\Response as RawResponse;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -36,7 +36,7 @@ class Client
     public function __construct(AuthenticationStrategyInterface $authenticationStrategy, $isDebug)
     {
         $this->authenticationStrategy = $authenticationStrategy;
-        $this->isDebug = !!$isDebug;
+        $this->isDebug = (bool) $isDebug;
         $this->curlOptions = array();
     }
 
@@ -113,15 +113,16 @@ class Client
     }
 
     /**
-     * Initiates an ExpressCheckout payment process
+     * Initiates an ExpressCheckout payment process.
      *
      * Optional parameters can be found here:
      * https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/e_howto_api_nvp_r_SetExpressCheckout
      *
-     * @param float $amount
+     * @param float  $amount
      * @param string $returnUrl
      * @param string $cancelUrl
-     * @param array $optionalParameters
+     * @param array  $optionalParameters
+     *
      * @return Response
      */
     public function requestSetExpressCheckout($amount, $returnUrl, $cancelUrl, array $optionalParameters = array())
@@ -154,7 +155,7 @@ class Client
     {
         return $this->sendApiRequest(array_merge($optionalParameters, array(
             'METHOD' => 'RefundTransaction',
-            'TRANSACTIONID' => $transactionId
+            'TRANSACTIONID' => $transactionId,
         )));
     }
 
@@ -204,9 +205,10 @@ class Client
     }
 
     /**
-     * A small helper to url-encode an array
+     * A small helper to url-encode an array.
      *
      * @param array $encode
+     *
      * @return string
      */
     protected function urlEncodeArray(array $encode)
@@ -220,11 +222,13 @@ class Client
     }
 
     /**
-     * Performs a request to an external payment service
+     * Performs a request to an external payment service.
      *
      * @throws CommunicationException when an curl error occurs
+     *
      * @param Request $request
-     * @param mixed $parameters either an array for form-data, or an url-encoded string
+     * @param mixed   $parameters either an array for form-data, or an url-encoded string
+     *
      * @return Response
      */
     public function request(Request $request)
@@ -268,9 +272,9 @@ class Client
             }
 
             curl_setopt($curl, CURLOPT_POSTFIELDS, $postFields);
-        } else if ('PUT' === $method) {
+        } elseif ('PUT' === $method) {
             curl_setopt($curl, CURLOPT_PUT, true);
-        } else if ('HEAD' === $method) {
+        } elseif ('HEAD' === $method) {
             curl_setopt($curl, CURLOPT_NOBODY, true);
         }
 

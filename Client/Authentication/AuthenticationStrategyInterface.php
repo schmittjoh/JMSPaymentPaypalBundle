@@ -22,6 +22,6 @@ use JMS\Payment\CoreBundle\BrowserKit\Request;
 
 interface AuthenticationStrategyInterface
 {
-    function getApiEndpoint($isDebug);
-    function authenticate(Request $request);
+    public function getApiEndpoint($isDebug);
+    public function authenticate(Request $request);
 }
