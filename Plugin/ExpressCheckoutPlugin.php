@@ -4,12 +4,12 @@ namespace JMS\Payment\PaypalBundle\Plugin;
 
 use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
-use JMS\Payment\CoreBundle\Plugin\PluginInterface;
 use JMS\Payment\CoreBundle\Plugin\AbstractPlugin;
-use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
-use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
 use JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl;
 use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
+use JMS\Payment\CoreBundle\Plugin\PluginInterface;
 use JMS\Payment\CoreBundle\Util\Number;
 use JMS\Payment\PaypalBundle\Client\Client;
 use JMS\Payment\PaypalBundle\Client\Response;
@@ -53,10 +53,10 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $client;
 
     /**
-     * @param string $returnUrl
-     * @param string $cancelUrl
+     * @param string                                  $returnUrl
+     * @param string                                  $cancelUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
-     * @param string $notifyUrl
+     * @param string                                  $notifyUrl
      */
     public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null)
     {
@@ -104,8 +104,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
             $completeType = 'Complete';
-        }
-        else {
+        } else {
             $completeType = 'NotComplete';
         }
 
@@ -212,13 +211,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
-        switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
+        switch ($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
             case 'Completed':
                 break;
 
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
+
                 throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
 
             default:
@@ -238,7 +237,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
     /**
      * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
-     * @param string $paymentAction
+     * @param string                                                      $paymentAction
      *
      * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException if user has to authenticate the token
      *
@@ -276,8 +275,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
     /**
      * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
-     * @param \JMS\Payment\PaypalBundle\Client\Response $response
-     * @return null
+     * @param \JMS\Payment\PaypalBundle\Client\Response                   $response
+     *
      * @throws \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
      */
     protected function throwUnlessSuccessResponse(Response $response, FinancialTransactionInterface $transaction)
@@ -299,8 +298,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
-        }
-        else if (0 !== strlen($this->returnUrl)) {
+        } elseif (0 !== strlen($this->returnUrl)) {
             return $this->returnUrl;
         }
 
@@ -311,8 +309,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('cancel_url')) {
             return $data->get('cancel_url');
-        }
-        else if (0 !== strlen($this->cancelUrl)) {
+        } elseif (0 !== strlen($this->cancelUrl)) {
             return $this->cancelUrl;
         }
 
@@ -323,8 +320,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('notify_url')) {
             return $data->get('notify_url');
-        }
-        else if (0 !== strlen($this->notifyUrl)) {
+        } elseif (0 !== strlen($this->notifyUrl)) {
             return $this->notifyUrl;
         }
     }
