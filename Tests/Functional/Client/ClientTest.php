@@ -1,9 +1,8 @@
 <?php
 
-namespace JMS\Payment\PaypalBundle\Tests\Functional\Paypal;
+namespace JMS\Payment\PaypalBundle\Tests\Functional\Client;
 
-use JMS\Payment\PaypalBundle\Client\Authentication\TokenAuthenticationStrategy;
-use JMS\Payment\PaypalBundle\Client\Client;
+use JMS\Payment\PaypalBundle\Tests\Functional\FunctionalTest;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -21,26 +20,16 @@ use JMS\Payment\PaypalBundle\Client\Client;
  * limitations under the License.
  */
 
-class ClientTest extends \PHPUnit_Framework_TestCase
+class ClientTest extends FunctionalTest
 {
     /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
-    protected $client;
+    private $client;
 
     protected function setUp()
     {
-        if (empty($_SERVER['API_USERNAME']) || empty($_SERVER['API_PASSWORD']) || empty($_SERVER['API_SIGNATURE'])) {
-            $this->markTestSkipped('In order to run these tests you have to configure: API_USERNAME, API_PASSWORD, API_SIGNATURE parameters in phpunit.xml file');
-        }
-
-        $authenticationStrategy = new TokenAuthenticationStrategy(
-            $_SERVER['API_USERNAME'],
-            $_SERVER['API_PASSWORD'],
-            $_SERVER['API_SIGNATURE']
-        );
-
-        $this->client = new Client($authenticationStrategy, $debug = true);
+        $this->client = $this->getClient();
     }
 
     public function testRequestSetExpressCheckout()
