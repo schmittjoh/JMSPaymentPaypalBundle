@@ -35,6 +35,7 @@ class Configuration
                     ->scalarNode('return_url')->defaultNull()->end()
                     ->scalarNode('cancel_url')->defaultNull()->end()
                     ->scalarNode('notify_url')->defaultNull()->end()
+                    ->scalarNode('useraction')->defaultNull()->end()
                     ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
                 ->end()
             ->end()

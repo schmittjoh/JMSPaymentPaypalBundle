@@ -48,6 +48,11 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $notifyUrl;
 
     /**
+     * @var string
+     */
+    protected $userAction;
+
+    /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
     protected $client;
@@ -57,13 +62,15 @@ class ExpressCheckoutPlugin extends AbstractPlugin
      * @param string                                  $cancelUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
      * @param string                                  $notifyUrl
+     * @param string                                  $userAction
      */
-    public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null)
+    public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null, $userAction = null)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
         $this->notifyUrl = $notifyUrl;
+        $this->userAction = $userAction;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -184,11 +191,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             default:
-                $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
-                $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
-
-                throw $actionRequest;
+                $this->throwActionRequired($token, $data, $transaction);
         }
 
         // complete the transaction
@@ -264,13 +267,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         $data->set('express_checkout_token', $response->body->get('TOKEN'));
 
-        $authenticateTokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl($response->body->get('TOKEN'));
-
-        $actionRequest = new ActionRequiredException('User must authorize the transaction.');
-        $actionRequest->setFinancialTransaction($transaction);
-        $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
-
-        throw $actionRequest;
+        $this->throwActionRequired($response->body->get('TOKEN'), $data, $transaction);
     }
 
     /**
@@ -294,11 +291,36 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         throw $ex;
     }
 
+    /**
+     * @param string                                                      $token
+     * @param \JMS\Payment\CoreBundle\Model\ExtendedDataInterface         $data
+     * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
+     *
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException
+     */
+    protected function throwActionRequired($token, $data, $transaction)
+    {
+        $ex = new ActionRequiredException('User must authorize the transaction.');
+        $ex->setFinancialTransaction($transaction);
+
+        $params = array();
+
+        if ($useraction = $this->getUserAction($data)) {
+            $params['useraction'] = $this->getUserAction($data);
+        }
+
+        $ex->setAction(new VisitUrl(
+            $this->client->getAuthenticateExpressCheckoutTokenUrl($token, $params)
+        ));
+
+        throw $ex;
+    }
+
     protected function getReturnUrl(ExtendedDataInterface $data)
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
-        } elseif (0 !== strlen($this->returnUrl)) {
+        } elseif (!empty($this->returnUrl)) {
             return $this->returnUrl;
         }
 
@@ -309,7 +331,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('cancel_url')) {
             return $data->get('cancel_url');
-        } elseif (0 !== strlen($this->cancelUrl)) {
+        } elseif (!empty($this->cancelUrl)) {
             return $this->cancelUrl;
         }
 
@@ -320,8 +342,17 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('notify_url')) {
             return $data->get('notify_url');
-        } elseif (0 !== strlen($this->notifyUrl)) {
+        } elseif (!empty($this->notifyUrl)) {
             return $this->notifyUrl;
+        }
+    }
+
+    protected function getUserAction(ExtendedDataInterface $data)
+    {
+        if ($data->has('useraction')) {
+            return $data->get('useraction');
+        } elseif (!empty($this->userAction)) {
+            return $this->userAction;
         }
     }
 }

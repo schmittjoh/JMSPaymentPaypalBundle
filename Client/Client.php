@@ -183,15 +183,18 @@ class Client
         return new Response($parameters);
     }
 
-    public function getAuthenticateExpressCheckoutTokenUrl($token)
+    public function getAuthenticateExpressCheckoutTokenUrl($token, array $params = array())
     {
         $host = $this->isDebug ? 'www.sandbox.paypal.com' : 'www.paypal.com';
+        $params = array_merge(array('token' => $token), $params);
 
-        return sprintf(
-            'https://%s/cgi-bin/webscr?cmd=_express-checkout&token=%s',
-            $host,
-            $token
-        );
+        $url = sprintf('https://%s/cgi-bin/webscr?cmd=_express-checkout', $host);
+
+        foreach ($params as $key => $value) {
+            $url .= sprintf('&%s=%s', $key, $value);
+        }
+
+        return $url;
     }
 
     public function convertAmountToPaypalFormat($amount)
