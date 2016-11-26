@@ -78,7 +78,7 @@ This is usually the URL of the same controller action that redirected the user t
         'paypal_express_checkout' => [
             'return_url' => $this->generateUrl('app_orders_paymentcreate', [
                 'id' => $order->getId(),
-            ), UrlGeneratorInterface::ABSOLUTE_URL),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
         ],
     ];
 
@@ -105,7 +105,7 @@ The URL to which the user is redirected when they cancel the payment on PayPal's
         'paypal_express_checkout' => [
             'cancel_url' => $this->generateUrl('app_orders_paymentcancel', [
                 'id' => $order->getId(),
-            ), UrlGeneratorInterface::ABSOLUTE_URL),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
         ],
     ];
 
@@ -134,7 +134,7 @@ The URL to which Instant Payment Notifications (IPN) will be sent.
         'paypal_express_checkout' => [
             'notify_url' => $this->generateUrl('app_orders_ipn', [
                 'id' => $order->getId(),
-            ), UrlGeneratorInterface::ABSOLUTE_URL),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
         ],
     ];
 
