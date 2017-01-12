@@ -1,7 +1,24 @@
 language: php
-php:
-  - 5.4
-  - 5.3
 
-before_script:
-  - composer install --dev
+branches:
+  only:
+    - master
+matrix:
+  include:
+    - php: 5.3
+      env: SYMFONY_VERSION=2.8.*
+    - php: 7.0
+      env: SYMFONY_VERSION=2.3.*
+    - php: 7.0
+      env: SYMFONY_VERSION=2.8.*
+    - php: 7.0
+      env: SYMFONY_VERSION=3.1.*
+
+before_install:
+  # Disable xdebug for improved performance
+  - phpenv config-rm xdebug.ini
+  # Prevent Travis throwing an out of memory error on PHP 5.3
+  - if [[ $(phpenv version-name) == 5.3 ]]; then echo "memory_limit=-1" >> ~/.phpenv/versions/5.3/etc/conf.d/travis.ini; fi
+
+before_script: composer install --prefer-dist
+script: vendor/bin/phpunit

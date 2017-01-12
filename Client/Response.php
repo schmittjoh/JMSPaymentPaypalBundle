@@ -59,7 +59,7 @@ class Response
                 'long_message' => $this->body->get('L_LONGMESSAGE'.$i),
             );
 
-            $i++;
+            ++$i;
         }
 
         return $errors;
@@ -73,8 +73,7 @@ class Response
             foreach ($this->getErrors() as $error) {
                 $str .= "{$error['code']}: {$error['short_message']} ({$error['long_message']})\n";
             }
-        }
-        else {
+        } else {
             $str = var_export($this->body->all(), true);
         }
 
