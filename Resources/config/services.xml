@@ -12,12 +12,13 @@
         <parameter key="payment.plugin.paypal_simple_checkout.class">JMS\Payment\PaypalBundle\Plugin\SimpleCheckoutPlugin</parameter>
         <parameter key="payment.paypal.simple_checkout.return_url"></parameter>
         <parameter key="payment.paypal.simple_checkout.cancel_url"></parameter>
+        <parameter key="payment.paypal.express_checkout.useraction"></parameter>
 
         <parameter key="payment.paypal.authentication_strategy.token.class">JMS\Payment\PaypalBundle\Client\Authentication\TokenAuthenticationStrategy</parameter>
         <parameter key="payment.paypal.username"></parameter>
         <parameter key="payment.paypal.password"></parameter>
         <parameter key="payment.paypal.signature"></parameter>
-        
+
         <parameter key="payment.form.paypal_express_checkout_type.class">JMS\Payment\PaypalBundle\Form\ExpressCheckoutType</parameter>
 
         <parameter key="payment.paypal.client.class">JMS\Payment\PaypalBundle\Client\Client</parameter>
@@ -37,6 +38,7 @@
             <argument>%payment.paypal.express_checkout.cancel_url%</argument>
             <argument type="service" id="payment.paypal.client" />
             <argument>%payment.paypal.express_checkout.notify_url%</argument>
+            <argument>%payment.paypal.express_checkout.useraction%</argument>
             <tag name="payment.plugin" />
         </service>
 
@@ -44,7 +46,7 @@
             <argument type="service" id="payment.paypal.authentication_strategy" />
             <argument>%payment.paypal.debug%</argument>
         </service>
-        
+
         <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%">
             <tag name="payment.method_form_type" />
             <tag name="form.type" alias="paypal_express_checkout" />

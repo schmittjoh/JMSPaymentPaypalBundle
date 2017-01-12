@@ -1,7 +1,5 @@
-composer.*
-vendor
-
-phpunit.xml
-.buildpath
-.project
-.settings/org.eclipse.php.core.prefs
+composer.lock
+vendor/
+venv/
+Resources/doc/_build/
+.php_cs.cache

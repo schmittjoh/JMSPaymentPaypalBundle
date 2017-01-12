@@ -4,12 +4,12 @@ namespace JMS\Payment\PaypalBundle\Plugin;
 
 use JMS\Payment\CoreBundle\Model\ExtendedDataInterface;
 use JMS\Payment\CoreBundle\Model\FinancialTransactionInterface;
-use JMS\Payment\CoreBundle\Plugin\PluginInterface;
 use JMS\Payment\CoreBundle\Plugin\AbstractPlugin;
-use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
-use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
 use JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl;
 use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\CoreBundle\Plugin\Exception\FinancialException;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
+use JMS\Payment\CoreBundle\Plugin\PluginInterface;
 use JMS\Payment\CoreBundle\Util\Number;
 use JMS\Payment\PaypalBundle\Client\Client;
 use JMS\Payment\PaypalBundle\Client\Response;
@@ -48,22 +48,29 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     protected $notifyUrl;
 
     /**
+     * @var string
+     */
+    protected $userAction;
+
+    /**
      * @var \JMS\Payment\PaypalBundle\Client\Client
      */
     protected $client;
 
     /**
-     * @param string $returnUrl
-     * @param string $cancelUrl
+     * @param string                                  $returnUrl
+     * @param string                                  $cancelUrl
      * @param \JMS\Payment\PaypalBundle\Client\Client $client
-     * @param string $notifyUrl
+     * @param string                                  $notifyUrl
+     * @param string                                  $userAction
      */
-    public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null)
+    public function __construct($returnUrl, $cancelUrl, Client $client, $notifyUrl = null, $userAction = null)
     {
         $this->client = $client;
         $this->returnUrl = $returnUrl;
         $this->cancelUrl = $cancelUrl;
         $this->notifyUrl = $notifyUrl;
+        $this->userAction = $userAction;
     }
 
     public function approve(FinancialTransactionInterface $transaction, $retry)
@@ -104,8 +111,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         if (Number::compare($transaction->getPayment()->getApprovedAmount(), $transaction->getRequestedAmount()) === 0) {
             $completeType = 'Complete';
-        }
-        else {
+        } else {
             $completeType = 'NotComplete';
         }
 
@@ -188,11 +194,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
                 break;
 
             default:
-                $actionRequest = new ActionRequiredException('User has not yet authorized the transaction.');
-                $actionRequest->setFinancialTransaction($transaction);
-                $actionRequest->setAction(new VisitUrl($this->client->getAuthenticateExpressCheckoutTokenUrl($token)));
-
-                throw $actionRequest;
+                $this->throwActionRequired($token, $data, $transaction);
         }
 
         // complete the transaction
@@ -215,13 +217,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         );
         $this->throwUnlessSuccessResponse($response, $transaction);
 
-        switch($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
+        switch ($response->body->get('PAYMENTINFO_0_PAYMENTSTATUS')) {
             case 'Completed':
                 break;
 
             case 'Pending':
                 $transaction->setReferenceNumber($response->body->get('PAYMENTINFO_0_TRANSACTIONID'));
-                
+
                 throw new PaymentPendingException('Payment is still pending: '.$response->body->get('PAYMENTINFO_0_PENDINGREASON'));
 
             default:
@@ -241,7 +243,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
     /**
      * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
-     * @param string $paymentAction
+     * @param string                                                      $paymentAction
      *
      * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException if user has to authenticate the token
      *
@@ -268,19 +270,13 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
         $data->set('express_checkout_token', $response->body->get('TOKEN'));
 
-        $authenticateTokenUrl = $this->client->getAuthenticateExpressCheckoutTokenUrl($response->body->get('TOKEN'));
-
-        $actionRequest = new ActionRequiredException('User must authorize the transaction.');
-        $actionRequest->setFinancialTransaction($transaction);
-        $actionRequest->setAction(new VisitUrl($authenticateTokenUrl));
-
-        throw $actionRequest;
+        $this->throwActionRequired($response->body->get('TOKEN'), $data, $transaction);
     }
 
     /**
      * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
-     * @param \JMS\Payment\PaypalBundle\Client\Response $response
-     * @return null
+     * @param \JMS\Payment\PaypalBundle\Client\Response                   $response
+     *
      * @throws \JMS\Payment\CoreBundle\Plugin\Exception\FinancialException
      */
     protected function throwUnlessSuccessResponse(Response $response, FinancialTransactionInterface $transaction)
@@ -298,12 +294,36 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         throw $ex;
     }
 
+    /**
+     * @param string                                                      $token
+     * @param \JMS\Payment\CoreBundle\Model\ExtendedDataInterface         $data
+     * @param \JMS\Payment\CoreBundle\Model\FinancialTransactionInterface $transaction
+     *
+     * @throws \JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException
+     */
+    protected function throwActionRequired($token, $data, $transaction)
+    {
+        $ex = new ActionRequiredException('User must authorize the transaction.');
+        $ex->setFinancialTransaction($transaction);
+
+        $params = array();
+
+        if ($useraction = $this->getUserAction($data)) {
+            $params['useraction'] = $this->getUserAction($data);
+        }
+
+        $ex->setAction(new VisitUrl(
+            $this->client->getAuthenticateExpressCheckoutTokenUrl($token, $params)
+        ));
+
+        throw $ex;
+    }
+
     protected function getReturnUrl(ExtendedDataInterface $data)
     {
         if ($data->has('return_url')) {
             return $data->get('return_url');
-        }
-        else if (0 !== strlen($this->returnUrl)) {
+        } elseif (!empty($this->returnUrl)) {
             return $this->returnUrl;
         }
 
@@ -314,8 +334,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('cancel_url')) {
             return $data->get('cancel_url');
-        }
-        else if (0 !== strlen($this->cancelUrl)) {
+        } elseif (!empty($this->cancelUrl)) {
             return $this->cancelUrl;
         }
 
@@ -326,9 +345,17 @@ class ExpressCheckoutPlugin extends AbstractPlugin
     {
         if ($data->has('notify_url')) {
             return $data->get('notify_url');
-        }
-        else if (0 !== strlen($this->notifyUrl)) {
+        } elseif (!empty($this->notifyUrl)) {
             return $this->notifyUrl;
+        }
+    }
+
+    protected function getUserAction(ExtendedDataInterface $data)
+    {
+        if ($data->has('useraction')) {
+            return $data->get('useraction');
+        } elseif (!empty($this->userAction)) {
+            return $this->userAction;
         }
     }
 }

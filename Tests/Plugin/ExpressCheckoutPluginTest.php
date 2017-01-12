@@ -2,14 +2,14 @@
 
 namespace JMS\Payment\PaypalBundle\Tests\Plugin;
 
-use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
-use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
+use JMS\Payment\CoreBundle\Entity\ExtendedData;
 use JMS\Payment\CoreBundle\Entity\FinancialTransaction;
 use JMS\Payment\CoreBundle\Entity\Payment;
-use JMS\Payment\CoreBundle\Entity\ExtendedData;
 use JMS\Payment\CoreBundle\Entity\PaymentInstruction;
-use JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin;
+use JMS\Payment\CoreBundle\Plugin\Exception\ActionRequiredException;
+use JMS\Payment\CoreBundle\Plugin\Exception\PaymentPendingException;
 use JMS\Payment\PaypalBundle\Client\Response;
+use JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin;
 
 /*
  * Copyright 2010 Johannes M. Schmitt <schmittjoh@gmail.com>
@@ -37,7 +37,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         $expectedOptionalParameters = array(
             'PAYMENTREQUEST_0_PAYMENTACTION' => 'Authorization',
             'PAYMENTREQUEST_0_CURRENCYCODE'  => 'EUR',
-            'CUSTOM_PARAMETER' => 'CUSTOM_VALUE'
+            'CUSTOM_PARAMETER' => 'CUSTOM_VALUE',
         );
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestSetExpressCheckout'));
@@ -51,7 +51,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
                 $this->equalTo($expectedOptionalParameters)
             )
             ->will($this->returnValue(new Response(array(
-                'ACK' => 'Success'
+                'ACK' => 'Success',
             ))))
         ;
 
@@ -59,15 +59,14 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $transaction = $this->createTransaction($expectedAmount, 'EUR');
         $transaction->getExtendedData()->set('checkout_params', array(
-            'CUSTOM_PARAMETER' => 'CUSTOM_VALUE'
+            'CUSTOM_PARAMETER' => 'CUSTOM_VALUE',
         ));
 
         try {
             $plugin->approve($transaction, false);
 
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (ActionRequiredException $ex) {
+        } catch (ActionRequiredException $ex) {
         }
     }
 
@@ -77,7 +76,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $requestSetExpressCheckoutReturn= new Response(array(
             'TOKEN' => $expectedToken,
-            'ACK' => 'Success'
+            'ACK' => 'Success',
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestSetExpressCheckout'));
@@ -95,8 +94,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
             $plugin->approve($transaction, false);
 
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (ActionRequiredException $ex) {
+        } catch (ActionRequiredException $ex) {
             $this->assertEquals(
                 $expectedToken,
                 $transaction->getExtendedData()->get('express_checkout_token')
@@ -107,7 +105,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
     public function testThrowVisitUrlActionToAuthenticateTokenWhileApproving()
     {
         $requestSetExpressCheckoutReturn= new Response(array(
-            'ACK' => 'Success'
+            'ACK' => 'Success',
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestSetExpressCheckout'));
@@ -124,8 +122,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         try {
             $plugin->approve($transaction, false);
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (ActionRequiredException $ex) {
+        } catch (ActionRequiredException $ex) {
             $this->assertSame($transaction, $ex->getFinancialTransaction());
         }
     }
@@ -138,7 +135,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $requestSetExpressCheckoutReturn= new Response(array(
             'ACK' => 'Success',
-            'TOKEN' => $token
+            'TOKEN' => $token,
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestSetExpressCheckout', 'getAuthenticateExpressCheckoutTokenUrl'));
@@ -161,8 +158,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         try {
             $plugin->approve($transaction, false);
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (ActionRequiredException $ex) {
+        } catch (ActionRequiredException $ex) {
             $action = $ex->getAction();
             $this->assertInstanceOf('JMS\Payment\CoreBundle\Plugin\Exception\Action\VisitUrl', $action);
             $this->assertEquals($expectedRedirectUrl, $action->getUrl());
@@ -200,7 +196,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         $expectedToken = 'the_express_checkout_token';
 
         $detailResponse = new Response(array(
-            'ACK' => 'Success'
+            'ACK' => 'Success',
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestGetExpressCheckoutDetails', 'requestSetExpressCheckout'));
@@ -223,8 +219,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         try {
             $plugin->approve($transaction, false);
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (ActionRequiredException $ex) {
+        } catch (ActionRequiredException $ex) {
             $this->assertSame($transaction, $ex->getFinancialTransaction());
 
             $action = $ex->getAction();
@@ -243,7 +238,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $detailResponse = new Response(array(
             'ACK' => 'Success',
-            'CHECKOUTSTATUS' => 'PaymentActionFailed'
+            'CHECKOUTSTATUS' => 'PaymentActionFailed',
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array('requestGetExpressCheckoutDetails', 'requestSetExpressCheckout'));
@@ -305,7 +300,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
 
         $requestGetExpressCheckoutDetailsResponse = new Response(array(
             'ACK' => 'Success',
-            'CHECKOUTSTATUS' => 'PaymentCompleted'
+            'CHECKOUTSTATUS' => 'PaymentCompleted',
         ));
 
         $requestDoExpressCheckoutPaymentResponse = new Response(array(
@@ -315,9 +310,9 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         ));
 
         $clientMock = $this->createClientMock($mockedMethods = array(
-            'requestGetExpressCheckoutDetails', 
+            'requestGetExpressCheckoutDetails',
             'requestSetExpressCheckout',
-            'requestDoExpressCheckoutPayment'
+            'requestDoExpressCheckoutPayment',
         ));
         $clientMock
             ->expects($this->never())
@@ -342,8 +337,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
         try {
             $plugin->approve($transaction, false);
             $this->fail('Plugin was expected to throw an exception.');
-        }
-        catch (PaymentPendingException $ex) {
+        } catch (PaymentPendingException $ex) {
             $this->assertEquals($expectedTransactionId, $transaction->getReferenceNumber());
         }
     }
@@ -352,6 +346,7 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
      * @param $amount
      * @param $currency
      * @param $data
+     *
      * @return \JMS\Payment\CoreBundle\Entity\FinancialTransaction
      */
     protected function createTransaction($amount, $currency)
@@ -372,6 +367,9 @@ class ExpressCheckoutPluginTest extends \PHPUnit_Framework_TestCase
      */
     protected function createClientMock($mockedMethods = array())
     {
-        return $this->getMock('JMS\Payment\PaypalBundle\Client\Client', $mockedMethods, array(), '', false);
+        return $this->getMockBuilder('JMS\Payment\PaypalBundle\Client\Client')
+            ->disableOriginalConstructor()
+            ->setMethods($mockedMethods)
+            ->getMock();
     }
 }
