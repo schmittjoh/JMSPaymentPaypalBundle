@@ -27,7 +27,7 @@ And register the bundle in your ``AppKernel.php``:
         $bundles = array(
             // ...
             new JMS\Payment\CoreBundle\JMSPaymentCoreBundle(),
-            new JMS\Payment\CoreBundle\JMSPaymentPaypalBundle(),
+            new JMS\Payment\PaypalBundle\JMSPaymentPaypalBundle(),
         );
     }
 
