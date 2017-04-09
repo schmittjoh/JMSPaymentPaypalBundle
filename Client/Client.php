@@ -228,11 +228,11 @@ class Client
      * Performs a request to an external payment service.
      *
      * @throws CommunicationException when an curl error occurs
+     * @throws \RuntimeException
      *
      * @param Request $request
-     * @param mixed   $parameters either an array for form-data, or an url-encoded string
      *
-     * @return Response
+     * @return RawResponse
      */
     public function request(Request $request)
     {
