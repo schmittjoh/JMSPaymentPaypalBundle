@@ -7,18 +7,26 @@ matrix:
   include:
     - php: 5.3
       env: SYMFONY_VERSION=2.8.*
-    - php: 7.0
-      env: SYMFONY_VERSION=2.3.*
-    - php: 7.0
+    - php: 5.6
       env: SYMFONY_VERSION=2.8.*
+    - php: 5.6
+      env: SYMFONY_VERSION=^3.0
     - php: 7.0
-      env: SYMFONY_VERSION=3.1.*
-
+      env: SYMFONY_VERSION=^3.0
+    - php: 7.0
+      env: DEPENDENCIES=beta
+    - php: 7.1
+      env: SYMFONY_VERSION=^3.0
+    - php: 7.1
+      env: DEPENDENCIES=beta
+      
 before_install:
   # Disable xdebug for improved performance
   - phpenv config-rm xdebug.ini
   # Prevent Travis throwing an out of memory error on PHP 5.3
   - if [[ $(phpenv version-name) == 5.3 ]]; then echo "memory_limit=-1" >> ~/.phpenv/versions/5.3/etc/conf.d/travis.ini; fi
+  # Set composer minimum-stability configuration filter to beta versions  
+  - if [ "$DEPENDENCIES" = "beta" ]; then perl -pi -e 's/^}$/,"minimum-stability":"beta"}/' composer.json; fi;
 
 before_script: composer install --prefer-dist
 script: vendor/bin/phpunit
