@@ -30,7 +30,7 @@
 
         <service id="payment.paypal.authentication_strategy" alias="payment.paypal.authentication_strategy.token" />
 
-        <service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%">
+        <service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%" public="true">
             <argument>%payment.paypal.express_checkout.return_url%</argument>
             <argument>%payment.paypal.express_checkout.cancel_url%</argument>
             <argument type="service" id="payment.paypal.client" />
@@ -39,12 +39,12 @@
             <tag name="payment.plugin" />
         </service>
 
-        <service id="payment.paypal.client" class="%payment.paypal.client.class%">
+        <service id="payment.paypal.client" class="%payment.paypal.client.class%" public="true">
             <argument type="service" id="payment.paypal.authentication_strategy" />
             <argument>%payment.paypal.debug%</argument>
         </service>
 
-        <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%">
+        <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%" public="true">
             <tag name="payment.method_form_type" />
             <tag name="form.type" alias="paypal_express_checkout" />
         </service>
