@@ -22,13 +22,13 @@
     </parameters>
 
     <services>
-        <service id="payment.paypal.authentication_strategy.token" class="%payment.paypal.authentication_strategy.token.class%">
+        <service id="payment.paypal.authentication_strategy.token" class="%payment.paypal.authentication_strategy.token.class%" public="true">
             <argument>%payment.paypal.username%</argument>
             <argument>%payment.paypal.password%</argument>
             <argument>%payment.paypal.signature%</argument>
         </service>
 
-        <service id="payment.paypal.authentication_strategy" alias="payment.paypal.authentication_strategy.token" />
+        <service id="payment.paypal.authentication_strategy" alias="payment.paypal.authentication_strategy.token" public="true" />
 
         <service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%" public="true">
             <argument>%payment.paypal.express_checkout.return_url%</argument>
