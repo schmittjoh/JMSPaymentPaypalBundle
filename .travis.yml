@@ -6,10 +6,14 @@ branches:
     
 matrix:
   include:
+    - php: 5.3
+      env: SYMFONY_VERSION=2.8.*
     - php: 5.6
       env: SYMFONY_VERSION=2.8.*
     - php: 5.6
       env: SYMFONY_VERSION=^3.0
+    - php: 7.0
+      env: SYMFONY_VERSION=2.8.*
     - php: 7.0
       env: SYMFONY_VERSION=^3.0
     - php: 7.0
@@ -26,6 +30,8 @@ matrix:
     - php: nightly
       
 before_install:
+  # Prevent Travis throwing an out of memory error on PHP 5.3
+  - if [ $(phpenv version-name) == 5.3 ]; then echo "memory_limit=-1" >> ~/.phpenv/versions/5.3/etc/conf.d/travis.ini; fi;
   # Disable xdebug for improved performance; Unstable PHP versions, like nightly, don't have xdebug enabled
   - if [ $(phpenv version-name) != "nightly" ]; then phpenv config-rm xdebug.ini; fi;
   # Set composer minimum-stability configuration filter to beta versions
