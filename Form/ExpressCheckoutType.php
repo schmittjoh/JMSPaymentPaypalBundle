@@ -16,7 +16,7 @@ class ExpressCheckoutType extends AbstractType
     {
     }
 
-    public function getName()
+    public function getBlockPrefix()
     {
         return 'paypal_express_checkout';
     }

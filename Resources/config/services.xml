@@ -44,7 +44,7 @@
         
         <service id="payment.form.paypal_express_checkout_type" class="%payment.form.paypal_express_checkout_type.class%">
             <tag name="payment.method_form_type" />
-            <tag name="form.type" alias="paypal_express_checkout" />
+            <tag name="form.type" />
         </service>
     </services>
 </container>
