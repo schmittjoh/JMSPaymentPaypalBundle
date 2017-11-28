@@ -1,7 +1,7 @@
 {
-    "name": "jms/payment-paypal-bundle",
+    "name": "markup/jms-payment-paypal-bundle",
     "type": "symfony-bundle",
-    "description": "Payment Bundle providing access to the PayPal API",
+    "description": "Payment Bundle providing access to the PayPal API, based on the JMS bundle",
     "keywords": ["payment", "paypal"],
     "homepage": "http://jmsyst.com/bundles/JMSPaymentPaypalBundle",
     "license": "Apache2",
