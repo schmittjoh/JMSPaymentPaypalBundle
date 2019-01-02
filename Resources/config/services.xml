@@ -30,7 +30,8 @@
 
         <service id="payment.paypal.authentication_strategy" alias="payment.paypal.authentication_strategy.token" />
 
-        <service id="payment.plugin.paypal_express_checkout" class="%payment.plugin.paypal_express_checkout.class%">
+        <service id="payment.plugin.paypal_express_checkout" alias="JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin"/>
+        <service id="JMS\Payment\PaypalBundle\Plugin\ExpressCheckoutPlugin" class="%payment.plugin.paypal_express_checkout.class%">
             <argument>%payment.paypal.express_checkout.return_url%</argument>
             <argument>%payment.paypal.express_checkout.cancel_url%</argument>
             <argument type="service" id="payment.paypal.client" />
