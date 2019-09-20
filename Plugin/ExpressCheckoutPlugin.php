@@ -180,9 +180,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
         $response = $this->client->requestDoReauthorization($originalAuthorizationId, $transaction->getRequestedAmount(), [
             'CURRENCYCODE' => $transaction->getPayment()->getPaymentInstruction()->getCurrency()
         ]);
-
         $credentialsKey = $this->getCredentialsKeyForTransaction($transaction);
-
         if ($response->body->get('ACK') == 'Success') {
             //GEt the new AuthorizationId and update the transaction
             $extendedData = $transaction->getExtendedData();
@@ -196,8 +194,9 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
             switch ($details->body->get('PAYMENTSTATUS')) {
                 case 'Completed':
-                    break;
-
+                    $transaction->setProcessedAmount($transaction->getRequestedAmount());
+                    $transaction->setResponseCode(PluginInterface::RESPONSE_CODE_SUCCESS);
+                    $transaction->setReasonCode(PluginInterface::REASON_CODE_SUCCESS);
                 case 'Pending':
                     //This exception should be trow just if the reason of the 'pending state' is different to 'authorization state'
                     if ($response->body->get('PENDINGREASON') != 'authorization') {
@@ -212,9 +211,7 @@ class ExpressCheckoutPlugin extends AbstractPlugin
 
                     throw $ex;
             }
-        } elseif ($response->body->get('L_ERRORCODE0') == self::ERROR_CODE_HONOR_WINDOW) {
-            // if the re-authorization is not allowed inside the honor period, then do nothing and use the original authorization ID
-            return;
+
         } else {
             $this->throwUnlessSuccessResponse($response, $transaction);
         }
