@@ -1,0 +1,7 @@
+parameters:
+    excludes_analyse:
+        - %currentWorkingDirectory%/DependencyInjection/Configuration.php
+        - %currentWorkingDirectory%/Tests/*
+        - %currentWorkingDirectory%/vendor/*
+        - %currentWorkingDirectory%/bin/*
+    reportUnmatchedIgnoredErrors: true

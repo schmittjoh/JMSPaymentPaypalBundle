@@ -84,6 +84,8 @@ class ExpressCheckoutPlugin extends AbstractPlugin
             return null;
         };
         $this->redirectDueToFundingError = false;
+
+        parent::__construct(false);
     }
 
     /**

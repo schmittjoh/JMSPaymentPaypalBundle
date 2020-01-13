@@ -1,7 +1,21 @@
 language: php
 php:
-  - 5.4
-  - 5.3
+  - 7.1
+  - 7.3
+
+matrix:
+  include:
+    - php: '7.1'
+      env: deps=low
+
+env:
+  global:
+    - deps=high
 
 before_script:
-  - composer install --dev
+  - if [ "$deps" = "high" ]; then composer install --ignore-platform-reqs; fi;
+  - if [ "$deps" = "low" ]; then composer --prefer-lowest --prefer-stable --ignore-platform-reqs update; fi
+
+script:
+  - vendor/bin/phpstan analyse -l 1 .
+  - export SYMFONY_DEPRECATIONS_HELPER=weak && vendor/bin/phpunit
