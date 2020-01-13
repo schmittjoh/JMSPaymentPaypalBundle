@@ -14,7 +14,7 @@ env:
 
 before_script:
   - if [ "$deps" = "high" ]; then composer install --ignore-platform-reqs; fi;
-  - if [ "$deps" = "low" ]; then composer --prefer-lowest --prefer-stable --ignore-platform-reqs update; fi
+  - if [ "$deps" = "low" ]; then sed -i -e 's/>=3.4 <5.0/^3.4/g' composer.json && composer --ignore-platform-reqs update; fi
 
 script:
   - vendor/bin/phpstan analyse -l 1 .
