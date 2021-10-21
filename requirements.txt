@@ -1,6 +1,6 @@
 alabaster==0.7.9
 argh==0.26.2
-Babel==2.3.4
+Babel==2.9.1
 backports-abc==0.4
 certifi==2016.9.26
 docutils==0.12
