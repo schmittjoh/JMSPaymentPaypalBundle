@@ -3,6 +3,10 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [1.3.0] - 2022-04-27
+### Added
+- Added support for Symfony 5
+
 ## [1.2.0] - 2019-01-03
 ### Added
 - Added support for Symfony 4
