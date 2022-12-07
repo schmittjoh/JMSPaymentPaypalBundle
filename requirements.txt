@@ -2,7 +2,7 @@ alabaster==0.7.9
 argh==0.26.2
 Babel==2.3.4
 backports-abc==0.4
-certifi==2016.9.26
+certifi==2022.12.7
 docutils==0.12
 imagesize==0.7.1
 Jinja2==2.11.3
